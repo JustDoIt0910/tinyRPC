@@ -2,8 +2,9 @@
 // Created by just do it on 2023/11/30.
 //
 #include "server/server.h"
-#include "asio.hpp"
 #include "server/session.h"
+#include "protocol/codec.h"
+#include "asio.hpp"
 #include <unordered_map>
 
 using namespace asio;
@@ -22,19 +23,19 @@ namespace tinyRPC {
         }
 
         void Run() {
-            start_accept();
+            StartAccept();
             ioc_.run();
         }
 
     private:
         using session_ptr = std::shared_ptr<Session>;
 
-        void start_accept() {
-            session_ptr session = std::make_shared<Session>(ioc_, server_);
-            acceptor_.async_accept(session->socket(), [this, session] (std::error_code ec) {
-                session->start();
-                sessions_[session->id()] = session;
-                start_accept();
+        void StartAccept() {
+            session_ptr session = std::make_shared<Session>(ioc_, server_, codec_.get());
+            acceptor_.async_accept(session->Socket(), [this, session] (std::error_code ec) {
+                session->Start();
+                sessions_[session->Id()] = session;
+                StartAccept();
             });
         }
 
@@ -42,6 +43,7 @@ namespace tinyRPC {
         ip::tcp::acceptor acceptor_;
         Server* server_;
         std::unordered_map<std::string, session_ptr> sessions_;
+        std::unique_ptr<Codec> codec_;
     };
 
     Server::Server(const std::string &address, uint16_t port) {

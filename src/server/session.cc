@@ -2,29 +2,37 @@
 // Created by just do it on 2023/12/1.
 //
 #include "server/session.h"
+#include "protocol/codec.h"
 #include <cstdio>
 
 namespace tinyRPC {
 
-    Session::Session(asio::io_context &ioc, tinyRPC::Server *server):
-    ioc_(ioc), server_(server), socket_(ioc_) {
+    Session::Session(asio::io_context &ioc, Server *server, Codec* codec):
+    ioc_(ioc), server_(server), codec_(codec), socket_(ioc_),
+    read_strand_(ioc_), write_strand_(ioc_) {}
 
-    }
-
-    void Session::start() {
+    void Session::Start() {
         char buf[50] = {0};
         auto ep = socket_.remote_endpoint();
         std::string addr_str = ep.address().to_string();
         sprintf(buf, "%s:%u", addr_str.c_str(), ep.port());
         id_ = std::string(buf);
-        do_read();
+        DoRead();
     }
 
-    ip::tcp::socket& Session::socket() { return socket_; }
+    ip::tcp::socket& Session::Socket() { return socket_; }
 
-    std::string& Session::id() { return id_; }
+    std::string& Session::Id() { return id_; }
 
-    void Session::do_read() {
+    void Session::DoRead() {
+        auto self = shared_from_this();
+        socket_.async_read_some(codec_->Buffer(), read_strand_.wrap([this, self](std::error_code ec,
+                std::size_t length) {
+            codec_->Consume(length);
+            RpcRequest request{};
+            while(codec_->Next(request)) {
 
+            }
+        }));
     }
 }

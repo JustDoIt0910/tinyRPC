@@ -3,9 +3,13 @@ project(tinyRPC)
 
 set(CMAKE_CXX_STANDARD 17)
 
-include_directories(${CMAKE_SOURCE_DIR}/include
-        ${CMAKE_SOURCE_DIR}/third_party/asio)
+set(THIRD_PARTY_DIR ${CMAKE_SOURCE_DIR}/third_party)
 
-add_library(${PROJECT_NAME} src/server/server.cc src/server/session.cc)
+include_directories(${CMAKE_SOURCE_DIR}/include
+        ${THIRD_PARTY_DIR}/asio)
+
+add_library(${PROJECT_NAME} src/server/server.cc
+        src/server/session.cc
+        src/protocol/codec.cc)
 add_subdirectory(test)
 

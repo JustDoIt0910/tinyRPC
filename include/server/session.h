@@ -4,29 +4,33 @@
 
 #ifndef TINYRPC_SESSION_H
 #define TINYRPC_SESSION_H
-#include "server.h"
 #include "asio.hpp"
 
 using namespace asio;
 
 namespace tinyRPC {
+    class Server;
+    class Codec;
 
-    class Session {
+class Session: public std::enable_shared_from_this<Session>{
     public:
-        Session(io_context& ioc, Server* server);
+        Session(io_context& ioc, Server* server, Codec* codec);
 
-        void start();
+        void Start();
 
-        ip::tcp::socket& socket();
+        ip::tcp::socket& Socket();
 
-        std::string& id();
+        std::string& Id();
 
     private:
-        void do_read();
+        void DoRead();
 
         io_context& ioc_;
         Server* server_;
+        Codec* codec_{};
         ip::tcp::socket socket_;
+        io_context::strand read_strand_;
+        io_context::strand write_strand_;
         std::string id_;
     };
 
