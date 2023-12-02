@@ -15,12 +15,19 @@ namespace tinyRPC {
     public:
         Session(io_context& ioc, Server* server);
 
-        ip::tcp::socket& Socket();
+        void start();
+
+        ip::tcp::socket& socket();
+
+        std::string& id();
 
     private:
+        void do_read();
+
         io_context& ioc_;
         Server* server_;
         ip::tcp::socket socket_;
+        std::string id_;
     };
 
 }
