@@ -9,45 +9,11 @@
 #include <vector>
 #include <endian.h>
 #include "asio.hpp"
-#include "error.h"
+#include "message.h"
 
 using namespace asio;
 
 namespace tinyRPC {
-
-    struct RpcMessage {
-        enum class MessageType {
-            RPC_REQUEST, RPC_RESPONSE
-        } type_;
-        std::string msg_id_;
-        std::string data_;
-
-        explicit RpcMessage(MessageType type): type_(type) {}
-
-        RpcMessage(MessageType type, std::string msg_id, std::string data)
-        :type_(type), msg_id_(std::move(msg_id)), data_(std::move(data)) {}
-    };
-
-    struct RpcRequest: public RpcMessage {
-        std::string full_method_name_;
-
-        RpcRequest(): RpcMessage(MessageType::RPC_REQUEST) {};
-
-        RpcRequest(std::string msg_id, std::string method_name, std::string data)
-        :RpcMessage(MessageType::RPC_REQUEST, std::move(msg_id), std::move(data)),
-        full_method_name_(std::move(method_name)) {}
-    };
-
-    struct RpcResponse: public RpcMessage {
-        ErrorCode ec_;
-        std::string error_info_;
-
-        RpcResponse(): RpcMessage(MessageType::RPC_RESPONSE), ec_() {};
-
-        RpcResponse(std::string msg_id, ErrorCode ec, std::string error_info, std::string data)
-        :RpcMessage(MessageType::RPC_RESPONSE, std::move(msg_id), std::move(data)),
-        ec_(ec), error_info_(std::move(error_info)) {}
-    };
 
     class Codec {
     public:
@@ -60,6 +26,8 @@ namespace tinyRPC {
         void Consume(size_t length);
 
         virtual bool Next(RpcMessage& message) = 0;
+
+        virtual std::string Encode(const RpcMessage& request) = 0;
 
         virtual ~Codec() = default;
 
@@ -97,12 +65,9 @@ namespace tinyRPC {
 
     class ProtobufRpcCodec: public Codec {
     public:
-        bool Next(RpcMessage& message) final;
-    };
+        bool Next(RpcMessage& message) override;
 
-    class HttpRpcCodec: public Codec {
-    public:
-        bool Next(RpcMessage& message) final;
+        std::string Encode(const RpcMessage& request) override;
     };
 }
 

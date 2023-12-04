@@ -28,9 +28,14 @@ namespace tinyRPC {
         auto self = shared_from_this();
         socket_.async_read_some(codec_->Buffer(), read_strand_.wrap([this, self](std::error_code ec,
                 std::size_t length) {
-            codec_->Consume(length);
-            RpcRequest request{};
-            while(codec_->Next(request)) {
+            if(!ec) {
+                codec_->Consume(length);
+                RpcRequest request{};
+                while(codec_->Next(request)) {
+
+                }
+            }
+            else {
 
             }
         }));

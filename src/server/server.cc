@@ -16,6 +16,7 @@ namespace tinyRPC {
         explicit Impl(const ip::tcp::endpoint& ep, Server* server):
         acceptor_(ioc_),
         server_(server) {
+            codec_ = std::make_unique<ProtobufRpcCodec>();
             acceptor_.open(ep.protocol());
             acceptor_.set_option(ip::tcp::acceptor::reuse_address(true));
             acceptor_.bind(ep);
