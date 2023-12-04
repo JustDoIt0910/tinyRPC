@@ -6,7 +6,7 @@
 #define TINYRPC_CLIENT_H
 #include <memory>
 #include <future>
-#include "protocol/message.h"
+#include "rpc/message.h"
 
 namespace tinyRPC {
     class Client {

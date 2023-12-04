@@ -2,7 +2,7 @@
 // Created by just do it on 2023/12/4.
 //
 #include "client/channel.h"
-#include "protocol/controller.h"
+#include "rpc/controller.h"
 #include "calculate_service.pb.h"
 
 int main() {

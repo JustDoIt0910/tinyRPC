@@ -12,8 +12,8 @@ include_directories(${CMAKE_SOURCE_DIR}/include
 
 add_library(${PROJECT_NAME} src/server/server.cc
         src/server/session.cc
-        src/protocol/codec.cc
-        src/protocol/controller.cc
+        src/rpc/codec.cc
+        src/rpc/controller.cc
         src/client/client.cc
         src/client/channel.cc)
 

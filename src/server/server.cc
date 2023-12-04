@@ -3,7 +3,7 @@
 //
 #include "server/server.h"
 #include "server/session.h"
-#include "protocol/codec.h"
+#include "rpc/codec.h"
 #include "asio.hpp"
 #include <unordered_map>
 
