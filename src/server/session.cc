@@ -7,8 +7,8 @@
 
 namespace tinyRPC {
 
-    Session::Session(asio::io_context &ioc, Server *server, Codec* codec):
-    ioc_(ioc), server_(server), codec_(codec), socket_(ioc_),
+    Session::Session(io_context& ioc, std::unique_ptr<Codec>& codec, Server* server):
+    ioc_(ioc), server_(server), codec_(std::move(codec)), socket_(ioc_),
     read_strand_(ioc_), write_strand_(ioc_) {}
 
     void Session::Start() {
@@ -30,8 +30,8 @@ namespace tinyRPC {
                 std::size_t length) {
             if(!ec) {
                 codec_->Consume(length);
-                RpcRequest request{};
-                while(codec_->Next(request)) {
+                RpcRequest request;
+                while(codec_->Next(request) == Codec::DecodeResult::SUCCESS) {
 
                 }
             }

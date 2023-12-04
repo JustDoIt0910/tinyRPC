@@ -8,10 +8,13 @@ set(CMAKE_BUILD_TYPE "Debug")
 set(THIRD_PARTY_DIR ${CMAKE_SOURCE_DIR}/third_party)
 
 include_directories(${CMAKE_SOURCE_DIR}/include
-        ${THIRD_PARTY_DIR}/asio)
+        ${THIRD_PARTY_DIR}/asio
+        ${THIRD_PARTY_DIR}/CRCpp-release-1.2.0.0/inc)
 
-add_library(${PROJECT_NAME} src/server/server.cc
+add_library(${PROJECT_NAME}
+        src/server/server.cc
         src/server/session.cc
+        src/rpc/abstract_codec.cc
         src/rpc/codec.cc
         src/rpc/controller.cc
         src/client/client.cc

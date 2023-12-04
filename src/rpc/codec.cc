@@ -2,70 +2,95 @@
 // Created by just do it on 2023/12/2.
 //
 #include "rpc/codec.h"
-#include "comm/crc32.h"
-#include <cassert>
 
 namespace tinyRPC {
 
-    void Codec::Consume(size_t length) {
-        size_t writable = Writable();
-        if(writable >= length) {
-            memcpy(&buffer_[0] + write_index_, tmp_, length);
-            write_index_ += length;
-            return;
-        }
-        if(read_index_ + writable >= length) {
-            size_t readable = Readable();
-            memmove(&buffer_[0], &buffer_[0] + read_index_, readable);
-            read_index_ = 0;
-            memcpy(&buffer_[0] + readable, tmp_, length);
-            write_index_ = readable + length;
-            return;
-        }
-        size_t need = length - writable;
-        buffer_.resize(buffer_.size() + need);
-        assert(Writable() >= length);
-        memcpy(&buffer_[0] + write_index_, tmp_, length);
-        write_index_ += length;
-    }
-
-    bool ProtobufRpcCodec::Next(RpcMessage &message) {
+    Codec::DecodeResult ProtobufRpcCodec::Next(RpcMessage &message) {
+        Codec::DecodeResult res = Codec::DecodeResult::DECODING;
         if(message.type_ == RpcMessage::MessageType::RPC_REQUEST) {
-
+            switch (state_) {
+                case DecodeState::DECODE_TOTAL_LEN:
+                    if(Readable() < sizeof(total_len_t)) break;
+                    if(Fetch<total_len_t>() <= 11) {
+                        res = Codec::DecodeResult::FAILED;
+                        break;
+                    }
+                    data_len_ = Fetch<total_len_t>() - sizeof(total_len_t) - sizeof(message_id_len_t) -
+                            sizeof(method_name_len_t) - sizeof(crc_t);
+                    Discard(sizeof(total_len_t));
+                    state_ = DecodeState::DECODE_MSG_ID;
+                case DecodeState::DECODE_MSG_ID:
+                    if(cur_field_len_ == 0) {
+                        if(Readable() < sizeof(message_id_len_t)) break;
+                        cur_field_len_ = Fetch<message_id_len_t>();
+                        Discard(sizeof(message_id_len_t));
+                    }
+                    if(Readable() < cur_field_len_) break;
+                    GetMessage<RpcRequest>()->msg_id_ = std::string(Fetch(), cur_field_len_);
+                    Discard(cur_field_len_);
+                    data_len_ -= cur_field_len_;
+                    cur_field_len_ = 0;
+                    state_ = DecodeState::DECODE_METHOD;
+                case DecodeState::DECODE_METHOD:
+                    if(cur_field_len_ == 0) {
+                        if(Readable() < sizeof(method_name_len_t)) break;
+                        cur_field_len_ = Fetch<method_name_len_t>();
+                        Discard(sizeof(method_name_len_t));
+                    }
+                    if(Readable() < cur_field_len_) break;
+                    GetMessage<RpcRequest>()->full_method_name_ = std::string(Fetch(), cur_field_len_);
+                    Discard(cur_field_len_);
+                    data_len_ -= cur_field_len_;
+                    cur_field_len_ = 0;
+                    state_ = DecodeState::DECODE_DATA;
+                case DecodeState::DECODE_DATA:
+                    if(Readable() < data_len_) break;
+                    GetMessage<RpcRequest>()->data_ = std::string(Fetch(), data_len_);
+                    Discard(data_len_);
+                    state_ = DecodeState::DECODE_CRC;
+                case DecodeState::DECODE_CRC:
+                    if(Readable() < sizeof(crc_t)) break;
+                    if(GetMessage<RpcRequest>()->CheckCRC(Fetch<crc_t>())) {
+                        auto& new_request = dynamic_cast<RpcRequest&>(message);
+                        new_request = std::move(*GetMessage<RpcRequest>());
+                        res = Codec::DecodeResult::SUCCESS;
+                    }
+                    else { res = Codec::DecodeResult::FAILED; }
+                    Discard(sizeof(crc_t));
+                    ResetMessage();
+                    state_ = DecodeState::DECODE_TOTAL_LEN;
+            }
         }
         else {
 
         }
-        return false;
+        return res;
     }
 
     std::string ProtobufRpcCodec::Encode(const RpcMessage& message) {
         std::string buffer;
         if(message.type_ == RpcMessage::MessageType::RPC_REQUEST) {
-            auto request = dynamic_cast<const RpcRequest&>(message);
-            uint32_t total_len = 11;
+            auto& request = dynamic_cast<const RpcRequest&>(message);
+            total_len_t total_len = sizeof(total_len_t) + sizeof(message_id_len_t) +
+                                    sizeof(method_name_len_t) + sizeof(crc_t);
             total_len += request.msg_id_.length();
             total_len += request.full_method_name_.length();
             total_len += request.data_.length();
-            total_len = htobe32(total_len);
-            buffer.append(reinterpret_cast<char*>(&total_len), sizeof(total_len));
+            EncodeToBuffer(buffer, total_len);
 
-            uint16_t msg_id_len = request.msg_id_.length();
-            msg_id_len = htobe16(msg_id_len);
-            buffer.append(reinterpret_cast<char*>(&msg_id_len), sizeof(msg_id_len));
-            buffer.append(request.msg_id_);
+            message_id_len_t msg_id_len = request.msg_id_.length();
+            EncodeToBuffer(buffer, msg_id_len);
+            EncodeToBuffer(buffer, request.msg_id_);
 
-            uint8_t method_name_len = request.full_method_name_.length();
-            buffer.push_back(static_cast<char>(method_name_len));
-            buffer.append(request.full_method_name_);
-            buffer.append(request.data_);
+            method_name_len_t method_name_len = request.full_method_name_.length();
+            EncodeToBuffer(buffer, method_name_len);
+            EncodeToBuffer(buffer, request.full_method_name_);
+            EncodeToBuffer(buffer, request.data_);
 
-            uint32_t crc = crc32(reinterpret_cast<uint8_t*>(buffer.data()), buffer.length());
-            crc = htobe32(crc);
-            buffer.append(reinterpret_cast<char*>(&crc), sizeof(crc));
+            EncodeToBuffer(buffer, request.CRC());
         }
         else {
-            auto response = dynamic_cast<const RpcRequest&>(message);
+            auto& response = dynamic_cast<const RpcRequest&>(message);
         }
         return buffer;
     }

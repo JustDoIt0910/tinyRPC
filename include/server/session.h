@@ -14,7 +14,7 @@ namespace tinyRPC {
 
 class Session: public std::enable_shared_from_this<Session>{
     public:
-        Session(io_context& ioc, Server* server, Codec* codec);
+        Session(io_context& ioc, std::unique_ptr<Codec>& codec, Server* server);
 
         void Start();
 
@@ -27,7 +27,7 @@ class Session: public std::enable_shared_from_this<Session>{
 
         io_context& ioc_;
         Server* server_;
-        Codec* codec_{};
+        std::unique_ptr<Codec> codec_;
         ip::tcp::socket socket_;
         io_context::strand read_strand_;
         io_context::strand write_strand_;

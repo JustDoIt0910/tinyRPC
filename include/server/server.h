@@ -11,9 +11,13 @@ namespace tinyRPC {
 
     class Server {
     public:
-        Server(const std::string& addr, uint16_t port);
+        enum class RpcProtocol {PROTOBUF, HTTP};
 
-        explicit Server(uint16_t port);
+        Server(const std::string& addr, uint16_t port, RpcProtocol proto = RpcProtocol::PROTOBUF);
+
+        explicit Server(uint16_t port, RpcProtocol proto = RpcProtocol::PROTOBUF);
+
+        RpcProtocol Protocol();
 
         void Serve();
 
@@ -22,6 +26,7 @@ namespace tinyRPC {
     private:
         class Impl;
         std::unique_ptr<Impl> pimpl_;
+        RpcProtocol protocol_;
     };
 
 }
