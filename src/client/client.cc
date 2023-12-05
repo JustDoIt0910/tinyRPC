@@ -49,7 +49,8 @@ namespace tinyRPC {
     private:
         void Connect(ip::tcp::resolver::results_type& endpoints) {
             connect_res_ = connect_promise_.get_future();
-            async_connect(socket_, endpoints, [this](std::error_code ec, const tcp::endpoint&) {
+            async_connect(socket_, endpoints,
+                          [this](std::error_code ec, const tcp::endpoint&) {
                 if(!ec) {
                     connect_promise_.set_value();
                     DoRead();
@@ -62,18 +63,38 @@ namespace tinyRPC {
         }
 
         void Write(std::string data) {
-            write_queue_.push(std::move(data));
-            if(write_queue_.empty()) {
-
-            }
+            ioc_.post([this, d = std::move(data)] () mutable {
+                write_queue_.push(std::move(d));
+                if(write_queue_.size() == 1) { DoWrite(); }
+            });
         }
 
         void DoRead() {
+            socket_.async_read_some(codec_->Buffer(),
+                                    [this](std::error_code ec, std::size_t length) {
+                if(!ec) {
 
+                }
+                else {
+
+                }
+            });
         }
 
         void DoWrite() {
-
+            std::string& data = write_queue_.front();
+            async_write(socket_, buffer(data.data(), data.length()),
+                        [this] (std::error_code ec, size_t transferred) {
+                if(!ec) {
+                    std::cout << "write complete" << std::endl;
+                    write_queue_.pop();
+                    if(!write_queue_.empty()) { DoWrite(); }
+                }
+                else {
+                    // TODO handle write error
+                    std::cout << ec.message() << std::endl;
+                }
+            });
         }
 
         io_context ioc_;

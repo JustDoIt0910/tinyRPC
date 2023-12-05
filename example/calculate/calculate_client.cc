@@ -18,4 +18,7 @@ int main() {
     AddResponse resp;
 
     stub.Add(&controller, &query, &resp, nullptr);
+
+    while (true);
+
 }

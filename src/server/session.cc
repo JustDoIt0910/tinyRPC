@@ -4,6 +4,7 @@
 #include "server/session.h"
 #include "rpc/codec.h"
 #include <cstdio>
+#include <iostream>
 
 namespace tinyRPC {
 
