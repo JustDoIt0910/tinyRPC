@@ -23,6 +23,10 @@ namespace tinyRPC {
         if(!request->SerializeToString(&req_msg.data_)) {
             // TODO handle error
         }
+        auto timeout = rpc_controller->Timeout();
+        if(timeout) {
+            client_.SetConnectTimeout(*timeout);
+        }
         auto fu = client_.Call(req_msg);
     }
 }

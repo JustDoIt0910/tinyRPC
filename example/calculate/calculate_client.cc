@@ -6,9 +6,10 @@
 #include "calculate_service.pb.h"
 
 int main() {
-    tinyRPC::Channel channel("localhost", 9999);
+    tinyRPC::Channel channel("127.0.0.1", 9999);
     CalculateService_Stub stub(&channel);
     tinyRPC::Controller controller;
+    controller.SetTimeout(2000);
 
     AddQuery query;
     query.set_a(10);

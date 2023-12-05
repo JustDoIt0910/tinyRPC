@@ -9,11 +9,14 @@
 #include "rpc/message.h"
 
 namespace tinyRPC {
+
     class Client {
     public:
         Client(const std::string& address, uint16_t port);
 
         std::future<RpcResponse> Call(const RpcRequest& request);
+
+        void SetConnectTimeout(int milliseconds);
 
         ~Client();
 
@@ -21,6 +24,7 @@ namespace tinyRPC {
         class Impl;
         std::unique_ptr<Impl> pimpl_;
     };
+
 }
 
 #endif //TINYRPC_CLIENT_H

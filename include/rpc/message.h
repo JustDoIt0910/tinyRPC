@@ -31,7 +31,7 @@ namespace tinyRPC {
 
         bool CheckCRC(uint32_t crc) const { return CRC() == crc; }
 
-        virtual ~RpcMessage() = default;
+        virtual ~RpcMessage() noexcept = default;
     };
 
     struct RpcRequest: public RpcMessage {
