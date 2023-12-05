@@ -51,18 +51,18 @@ namespace tinyRPC {
         }
 
         template<typename T>
-        std::enable_if_t<(!std::is_same_v<std::decay_t<T>, std::string>) && (sizeof(T) > 1)>
+        std::enable_if_t<(!std::is_same_v<T, std::string>) && (sizeof(T) > 1)>
         EncodeToBuffer(std::string& buffer, const T& val) {
             T val_be = HostToNetwork(val);
             buffer.append(reinterpret_cast<char*>(&val_be), sizeof(T));
         }
 
         template<typename T>
-        std::enable_if_t<(!std::is_same_v<std::decay_t<T>, std::string>) && (sizeof(T) == 1)>
+        std::enable_if_t<(!std::is_same_v<T, std::string>) && (sizeof(T) == 1)>
         EncodeToBuffer(std::string& buffer, const T& val) { buffer.push_back(val); }
 
         template<typename T>
-        std::enable_if_t<std::is_same_v<std::decay_t<T>, std::string>>
+        std::enable_if_t<std::is_same_v<T, std::string>>
         EncodeToBuffer(std::string& buffer, const T& val) { buffer.append(val); }
 
     private:

@@ -5,6 +5,7 @@
 #ifndef TINYRPC_MESSAGE_H
 #define TINYRPC_MESSAGE_H
 #include <string>
+#include <cstring>
 #include "error.h"
 #include "CRC.h"
 
@@ -19,7 +20,13 @@ namespace tinyRPC {
 
         explicit RpcMessage(MessageType type): type_(type) {}
 
-        RpcMessage& operator=(RpcMessage&& msg) = default;
+        RpcMessage& operator=(RpcMessage&&) = default;
+
+        RpcMessage(RpcMessage&&) = default;
+
+        RpcMessage& operator=(const RpcMessage&) = default;
+
+        RpcMessage(const RpcMessage&) = default;
 
         RpcMessage(MessageType type, std::string msg_id, std::string data)
                 :type_(type), msg_id_(std::move(msg_id)), data_(std::move(data)) {}
@@ -50,18 +57,18 @@ namespace tinyRPC {
     };
 
     struct RpcResponse: public RpcMessage {
-        ErrorCode ec_;
-        std::string error_info_;
+        rpc_error::error_code ec_;
 
         RpcResponse(): RpcMessage(MessageType::RPC_RESPONSE), ec_() {};
 
-        RpcResponse(std::string msg_id, ErrorCode ec, std::string error_info, std::string data)
+        RpcResponse(std::string msg_id, rpc_error::error_code ec, std::string data)
                 :RpcMessage(MessageType::RPC_RESPONSE, std::move(msg_id), std::move(data)),
-                 ec_(ec), error_info_(std::move(error_info)) {}
+                 ec_(std::move(ec)) {}
 
         uint32_t CRC() const override {
             uint32_t crc = RpcMessage::CRC();
-            return CRC::Calculate(error_info_.data(), error_info_.length(), CRC::CRC_32(), crc);
+            return CRC::Calculate(ec_.message(), strlen(ec_.message()),
+                                  CRC::CRC_32(), crc);
         }
     };
 

@@ -11,10 +11,11 @@ using namespace asio;
 namespace tinyRPC {
     class Server;
     class Codec;
+    class Router;
 
 class Session: public std::enable_shared_from_this<Session>{
     public:
-        Session(io_context& ioc, std::unique_ptr<Codec>& codec, Server* server);
+        Session(io_context& ioc, std::unique_ptr<Codec>& codec, Router* router);
 
         void Start();
 
@@ -26,8 +27,8 @@ class Session: public std::enable_shared_from_this<Session>{
         void DoRead();
 
         io_context& ioc_;
-        Server* server_;
         std::unique_ptr<Codec> codec_;
+        Router* router_;
         ip::tcp::socket socket_;
         io_context::strand read_strand_;
         io_context::strand write_strand_;

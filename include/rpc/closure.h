@@ -6,15 +6,16 @@
 #define TINYRPC_CLOSURE_H
 #include <google/protobuf/stubs/callback.h>
 #include <functional>
+#include <utility>
 
 namespace tinyRPC {
     class RpcClosure: public google::protobuf::Closure {
     public:
-        explicit RpcClosure(std::function<void()> cb) : cb_(cb) {}
+        explicit RpcClosure(std::function<void()> cb) : cb_(std::move(cb)) {}
 
-        ~RpcClosure() = default;
+        ~RpcClosure() override = default;
 
-        void Run() {
+        void Run() override {
             if(cb_) { cb_(); }
         }
 

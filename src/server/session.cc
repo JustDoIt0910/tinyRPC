@@ -3,14 +3,19 @@
 //
 #include "server/session.h"
 #include "rpc/codec.h"
+#include "rpc/abstract_router.h"
 #include <cstdio>
 #include <iostream>
 
 namespace tinyRPC {
 
-    Session::Session(io_context& ioc, std::unique_ptr<Codec>& codec, Server* server):
-    ioc_(ioc), server_(server), codec_(std::move(codec)), socket_(ioc_),
-    read_strand_(ioc_), write_strand_(ioc_) {}
+    Session::Session(io_context& ioc, std::unique_ptr<Codec>& codec, Router* router):
+    ioc_(ioc),
+    codec_(std::move(codec)),
+    router_(router),
+    socket_(ioc_),
+    read_strand_(ioc_),
+    write_strand_(ioc_) {}
 
     void Session::Start() {
         char buf[50] = {0};
@@ -33,11 +38,13 @@ namespace tinyRPC {
                 codec_->Consume(length);
                 RpcRequest request;
                 while(codec_->Next(request) == Codec::DecodeResult::SUCCESS) {
-
+                    ioc_.post([this, self, req = std::move(request)] () {
+                        RpcResponse resp = router_->Route(req);
+                    });
                 }
             }
             else {
-
+                // TODO handler read error
             }
         }));
     }

@@ -4,6 +4,7 @@
 #include "server/server.h"
 #include "server/session.h"
 #include "rpc/codec.h"
+#include "rpc/abstract_router.h"
 #include "asio.hpp"
 #include <unordered_map>
 
@@ -35,7 +36,7 @@ namespace tinyRPC {
             if(server_->Protocol() == RpcProtocol::PROTOBUF) {
                 codec = std::make_unique<ProtobufRpcCodec>();
             }
-            session_ptr session = std::make_shared<Session>(ioc_, codec, server_);
+            session_ptr session = std::make_shared<Session>(ioc_, codec, router_.get());
             acceptor_.async_accept(session->Socket(), [this, session] (std::error_code ec) {
                 session->Start();
                 sessions_[session->Id()] = session;
@@ -46,6 +47,7 @@ namespace tinyRPC {
         io_context ioc_;
         ip::tcp::acceptor acceptor_;
         Server* server_;
+        std::unique_ptr<Router> router_;
         std::unordered_map<std::string, session_ptr> sessions_;
     };
 
