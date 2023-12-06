@@ -57,17 +57,18 @@ namespace tinyRPC {
     };
 
     struct RpcResponse: public RpcMessage {
-        rpc_error::error_code ec_;
+        uint8_t ec_;
+        std::string error_detail_;
 
         RpcResponse(): RpcMessage(MessageType::RPC_RESPONSE), ec_() {};
 
-        RpcResponse(std::string msg_id, rpc_error::error_code ec, std::string data)
+        RpcResponse(std::string msg_id, uint8_t ec, std::string error_detail, std::string data)
                 :RpcMessage(MessageType::RPC_RESPONSE, std::move(msg_id), std::move(data)),
-                 ec_(std::move(ec)) {}
+                 ec_(ec), error_detail_(std::move(error_detail)) {}
 
         uint32_t CRC() const override {
             uint32_t crc = RpcMessage::CRC();
-            return CRC::Calculate(ec_.message(), strlen(ec_.message()),
+            return CRC::Calculate(error_detail_.data(), error_detail_.length(),
                                   CRC::CRC_32(), crc);
         }
     };

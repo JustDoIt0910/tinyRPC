@@ -4,9 +4,10 @@
 #include "server/server.h"
 #include "server/session.h"
 #include "rpc/codec.h"
-#include "rpc/abstract_router.h"
+#include "rpc/router.h"
 #include "asio.hpp"
 #include <unordered_map>
+#include <utility>
 
 using namespace asio;
 
@@ -17,11 +18,16 @@ namespace tinyRPC {
         explicit Impl(const ip::tcp::endpoint& ep, Server* server):
         acceptor_(ioc_),
         server_(server) {
+            if(server->Protocol() == RpcProtocol::PROTOBUF) {
+                router_ = std::make_unique<ProtobufRpcRouter>();
+            }
             acceptor_.open(ep.protocol());
             acceptor_.set_option(ip::tcp::acceptor::reuse_address(true));
             acceptor_.bind(ep);
             acceptor_.listen();
         }
+
+        void RegisterService(ServicePtr service) { router_->RegisterService(std::move(service)); }
 
         void Run() {
             StartAccept();
@@ -51,24 +57,27 @@ namespace tinyRPC {
         std::unordered_map<std::string, session_ptr> sessions_;
     };
 
-    Server::Server(const std::string &address, uint16_t port, RpcProtocol proto) {
+    Server::Server(const std::string &address, uint16_t port, RpcProtocol proto):
+    protocol_(proto) {
         ip::address addr = ip::make_address(address);
         ip::tcp::endpoint ep(addr, port);
         pimpl_ = std::make_unique<Impl>(ep, this);
         protocol_ = proto;
     }
 
-    Server::Server(uint16_t port, RpcProtocol proto) {
+    Server::Server(uint16_t port, RpcProtocol proto):
+    protocol_(proto) {
         ip::tcp::endpoint ep(ip::tcp::v4(), port);
         pimpl_ = std::make_unique<Impl>(ep, this);
-        protocol_ = proto;
     }
 
     Server::RpcProtocol Server::Protocol() { return protocol_; }
 
-    void Server::Serve() {
-        pimpl_->Run();
+    void Server::RegisterService(ServicePtr service) {
+        pimpl_->RegisterService(std::move(service));
     }
+
+    void Server::Serve() { pimpl_->Run(); }
 
     Server::~Server() = default;
 }

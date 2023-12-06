@@ -5,6 +5,7 @@
 #ifndef TINYRPC_SESSION_H
 #define TINYRPC_SESSION_H
 #include "asio.hpp"
+#include <queue>
 
 using namespace asio;
 
@@ -26,12 +27,15 @@ class Session: public std::enable_shared_from_this<Session>{
     private:
         void DoRead();
 
+        void DoWrite();
+
         io_context& ioc_;
         std::unique_ptr<Codec> codec_;
         Router* router_;
         ip::tcp::socket socket_;
         io_context::strand read_strand_;
         io_context::strand write_strand_;
+        std::queue<std::string> write_queue_;
         std::string id_;
     };
 

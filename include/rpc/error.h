@@ -25,7 +25,7 @@ namespace tinyRPC {
                 RPC_SERIALIZE_ERROR
             };
 
-            explicit error_code(error err = RPC_SUCCESS, std::string detail = "");
+            error_code(error err, std::string detail);
 
             error code() const;
 

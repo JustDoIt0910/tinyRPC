@@ -25,6 +25,8 @@ namespace tinyRPC {
 
         ServicePtr GetService(const std::string& service) const;
 
+        virtual ~Router() = default;
+
     private:
         std::unordered_map<std::string, ServicePtr> service_map_;
     };

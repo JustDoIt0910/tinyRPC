@@ -7,7 +7,11 @@
 #include <memory>
 #include <string>
 
+namespace google::protobuf { class Service; }
+
 namespace tinyRPC {
+
+    using ServicePtr = std::shared_ptr<google::protobuf::Service>;
 
     class Server {
     public:
@@ -16,6 +20,8 @@ namespace tinyRPC {
         Server(const std::string& addr, uint16_t port, RpcProtocol proto = RpcProtocol::PROTOBUF);
 
         explicit Server(uint16_t port, RpcProtocol proto = RpcProtocol::PROTOBUF);
+
+        void RegisterService(ServicePtr service);
 
         RpcProtocol Protocol();
 

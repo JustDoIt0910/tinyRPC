@@ -27,7 +27,7 @@ namespace tinyRPC {
 
         virtual DecodeResult Next(RpcMessage& message) = 0;
 
-        virtual std::string Encode(const RpcMessage& request) = 0;
+        virtual std::string Encode(const RpcMessage& message) = 0;
 
         virtual ~Codec() = default;
 

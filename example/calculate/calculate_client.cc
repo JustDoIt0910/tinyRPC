@@ -17,8 +17,12 @@ int main() {
 
     AddResponse resp;
 
-    stub.Add(&controller, &query, &resp, nullptr);
-
-    while (true);
+    try {
+        stub.Add(&controller, &query, &resp, nullptr);
+    }
+    catch (tinyRPC::rpc_error& e) {
+        std::cout << e.what() << std::endl;
+    }
+    std::cout << resp.result() << std::endl;
 
 }

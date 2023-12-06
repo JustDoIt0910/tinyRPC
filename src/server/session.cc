@@ -40,12 +40,34 @@ namespace tinyRPC {
                 while(codec_->Next(request) == Codec::DecodeResult::SUCCESS) {
                     ioc_.post([this, self, req = std::move(request)] () {
                         RpcResponse resp = router_->Route(req);
+                        std::string data = codec_->Encode(resp);
+                        write_strand_.post([this, self, d = std::move(data)] () mutable {
+                            write_queue_.push(std::move(d));
+                            if(write_queue_.size() == 1) { DoWrite(); }
+                        });
                     });
                 }
+                DoRead();
             }
             else {
                 // TODO handler read error
             }
         }));
+    }
+
+    void Session::DoWrite() {
+        std::string& data = write_queue_.front();
+        auto self = shared_from_this();
+        async_write(socket_, buffer(data.data(), data.length()),
+                    write_strand_.wrap([this, self] (std::error_code ec, size_t transferred) {
+                        if(!ec) {
+                            write_queue_.pop();
+                            if(!write_queue_.empty()) { DoWrite(); }
+                        }
+                        else {
+                            // TODO handle write error
+                            std::cout << ec.message() << std::endl;
+                        }
+                    }));
     }
 }

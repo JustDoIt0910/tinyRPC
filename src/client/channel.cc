@@ -28,5 +28,9 @@ namespace tinyRPC {
             client_.SetConnectTimeout(*timeout);
         }
         auto fu = client_.Call(req_msg);
+        RpcResponse resp = fu.get();
+        if(!response->ParseFromString(resp.data_)) {
+            // TODO handle error
+        }
     }
 }
