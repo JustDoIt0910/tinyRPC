@@ -11,10 +11,7 @@ public:
              ::AddResponse* response,
              ::google::protobuf::Closure* done) override {
         response->set_result(request->a() + request->b());
-
-        if(done) {
-            done->Run();
-        }
+        if(done) { done->Run(); }
     }
 };
 
