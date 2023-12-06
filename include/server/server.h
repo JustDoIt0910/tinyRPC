@@ -6,6 +6,8 @@
 #define TINYRPC_SERVER_H
 #include <memory>
 #include <string>
+#include <thread>
+#include <vector>
 
 namespace google::protobuf { class Service; }
 
@@ -21,6 +23,8 @@ namespace tinyRPC {
 
         explicit Server(uint16_t port, RpcProtocol proto = RpcProtocol::PROTOBUF);
 
+        void SetWorkerNum(int num);
+
         void RegisterService(ServicePtr service);
 
         RpcProtocol Protocol();
@@ -30,9 +34,13 @@ namespace tinyRPC {
         ~Server();
 
     private:
+        friend class Session;
+        void RemoveSession(const std::string& session_id);
+
         class Impl;
         std::unique_ptr<Impl> pimpl_;
         RpcProtocol protocol_;
+        std::vector<std::thread> workers_;
     };
 
 }

@@ -2,6 +2,7 @@
 // Created by just do it on 2023/12/1.
 //
 #include "server/session.h"
+#include "server/server.h"
 #include "rpc/codec.h"
 #include "rpc/abstract_router.h"
 #include <cstdio>
@@ -9,13 +10,16 @@
 
 namespace tinyRPC {
 
-    Session::Session(io_context& ioc, std::unique_ptr<Codec>& codec, Router* router):
+    Session::Session(Server* server, io_context& ioc,
+                     std::unique_ptr<Codec>& codec, Router* router):
+    server_(server),
     ioc_(ioc),
     codec_(std::move(codec)),
     router_(router),
     socket_(ioc_),
     read_strand_(ioc_),
-    write_strand_(ioc_) {}
+    write_strand_(ioc_),
+    closing_(false) {}
 
     void Session::Start() {
         char buf[50] = {0};
@@ -34,6 +38,7 @@ namespace tinyRPC {
         auto self = shared_from_this();
         socket_.async_read_some(codec_->Buffer(), read_strand_.wrap([this, self](std::error_code ec,
                 std::size_t length) {
+            if(closing_.load()) {  return; }
             if(!ec) {
                 codec_->Consume(length);
                 RpcRequest request;
@@ -49,17 +54,24 @@ namespace tinyRPC {
                 }
                 DoRead();
             }
-            else {
-                // TODO handler read error
+            else if(ec == error::eof || ec == error::connection_reset) {
+                closing_.store(true);
+                write_strand_.post([this, self] () {
+                    socket_.shutdown(socket_base::shutdown_both);
+                    socket_.close();
+                    server_->RemoveSession(id_);
+                });
             }
         }));
     }
 
     void Session::DoWrite() {
+        if(closing_.load()) { return; }
         std::string& data = write_queue_.front();
         auto self = shared_from_this();
         async_write(socket_, buffer(data.data(), data.length()),
                     write_strand_.wrap([this, self] (std::error_code ec, size_t transferred) {
+                        if(closing_.load()) { return; }
                         if(!ec) {
                             write_queue_.pop();
                             if(!write_queue_.empty()) { DoWrite(); }

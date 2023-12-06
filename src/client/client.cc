@@ -34,12 +34,14 @@ namespace tinyRPC {
         }
 
         std::future<RpcResponse> Call(const RpcRequest& request) {
-            if(connect_timeout_) {
-                auto status = connect_res_.wait_for(*connect_timeout_);
-                if(status == std::future_status::ready) { connect_res_.get(); }
-                else { throw connect_timeout(server_addr_, port_); }
+            if(!connected_) {
+                if(connect_timeout_) {
+                    auto status = connect_res_.wait_for(*connect_timeout_);
+                    if(status == std::future_status::ready) { connect_res_.get(); }
+                    else { throw connect_timeout(server_addr_, port_); }
+                }
+                else { connect_res_.get(); }
             }
-            else { connect_res_.get(); }
             std::string data = codec_->Encode(request);
             auto promise = std::make_shared<CallPromise>();
             std::future<RpcResponse> fu = promise->get_future();
@@ -56,6 +58,7 @@ namespace tinyRPC {
             async_connect(socket_, endpoints,
                           [this](std::error_code ec, const tcp::endpoint&) {
                 if(!ec) {
+                    connected_ = true;
                     connect_promise_.set_value();
                     DoRead();
                 }
@@ -125,6 +128,7 @@ namespace tinyRPC {
         std::queue<std::string> write_queue_;
         std::unordered_map<std::string, CallPromisePtr> pending_calls_;
         std::optional<std::chrono::milliseconds> connect_timeout_;
+        bool connected_{false};
         std::string server_addr_;
         uint16_t port_;
     };
