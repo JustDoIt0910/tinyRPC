@@ -17,7 +17,7 @@ public:
 
 int main() {
     tinyRPC::Server server(9999);
-    //server.SetWorkerNum(8);
+    server.SetWorkerNum(2);
     server.RegisterService(std::make_shared<CalculateServiceImpl>());
     server.Serve();
 }

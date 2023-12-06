@@ -45,9 +45,9 @@ namespace tinyRPC {
     ProtobufRpcCodec::DecodeResult ProtobufRpcCodec::DecodeCrc(RpcMessage& message) {
         if(Readable() < sizeof(crc_t)) SAVE_STATE(DecodeCrc)
         DecodeResult res = Codec::DecodeResult::SUCCESS;
-        if(!GetMessage<RpcMessage>()->CheckCRC(Fetch<crc_t>())) {
-            res = Codec::DecodeResult::FAILED;
-        }
+//        if(!GetMessage<RpcMessage>()->CheckCRC(Fetch<crc_t>())) {
+//            res = Codec::DecodeResult::FAILED;
+//        }
         Discard(sizeof(crc_t));
         return Done(res, message);
     }
@@ -131,7 +131,9 @@ namespace tinyRPC {
             EncodeToBuffer(buffer, method_name_len);
             EncodeToBuffer(buffer, request.full_method_name_);
             EncodeToBuffer(buffer, request.data_);
-            EncodeToBuffer(buffer, request.CRC());
+            //EncodeToBuffer(buffer, request.CRC());
+            uint32_t crc = 0;
+            EncodeToBuffer(buffer, crc);
         }
         else {
             auto& response = dynamic_cast<const RpcResponse&>(message);
@@ -152,7 +154,9 @@ namespace tinyRPC {
             EncodeToBuffer(buffer, error_len);
             EncodeToBuffer(buffer, response.error_detail_);
             EncodeToBuffer(buffer, response.data_);
-            EncodeToBuffer(buffer, response.CRC());
+            //EncodeToBuffer(buffer, response.CRC());
+            uint32_t crc = 0;
+            EncodeToBuffer(buffer, crc);
         }
         return buffer;
     }
