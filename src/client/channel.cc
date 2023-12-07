@@ -27,10 +27,11 @@ namespace tinyRPC {
         if(timeout) {
             client_.SetConnectTimeout(*timeout);
         }
-        auto fu = client_.Call(req_msg);
-        RpcResponse resp = fu.get();
-        if(!response->ParseFromString(resp.data_)) {
-            // TODO handle error
+        if(rpc_controller->Async()) { client_.Call(req_msg, done); }
+        else {
+            auto fu = client_.Call(req_msg);
+            RpcResponse resp = fu.get();
+            response->ParseFromString(resp.data_);
         }
     }
 }

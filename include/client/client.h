@@ -8,6 +8,8 @@
 #include <future>
 #include "rpc/message.h"
 
+namespace google::protobuf { class Closure; }
+
 namespace tinyRPC {
 
     class Client {
@@ -15,6 +17,8 @@ namespace tinyRPC {
         Client(const std::string& address, uint16_t port);
 
         std::future<RpcResponse> Call(const RpcRequest& request);
+
+        void Call(const RpcRequest& request, google::protobuf::Closure* closure);
 
         void SetConnectTimeout(int milliseconds);
 

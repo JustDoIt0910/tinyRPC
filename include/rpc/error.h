@@ -22,12 +22,15 @@ namespace tinyRPC {
                 RPC_NO_SUCH_METHOD,
                 RPC_BAD_DATA,
                 RPC_CALL_ERROR,
-                RPC_SERIALIZE_ERROR
+                RPC_SERIALIZE_ERROR,
+                RPC_PARSE_ERROR
             };
 
-            error_code(error err, std::string detail);
+            explicit error_code(error err = RPC_SUCCESS, std::string detail = "");
 
             error code() const;
+
+            bool ok() const;
 
             const char* message() const;
 

@@ -3,7 +3,8 @@
 //
 #include "rpc/codec.h"
 
-#define SAVE_STATE(state) { state_fn_ = &ProtobufRpcCodec::state; return DecodeResult::DECODING; }
+#define SAVE_STATE(state) { state_fn_ = &ProtobufRpcCodec::state; \
+                            return DecodeResult::DECODING; }
 
 namespace tinyRPC {
 

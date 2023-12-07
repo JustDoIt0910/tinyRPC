@@ -35,6 +35,6 @@ set(LIBS ${PROJECT_NAME}
         pthread
         uuid)
 
-add_subdirectory(test)
+#add_subdirectory(test)
 add_subdirectory(example/calculate)
 

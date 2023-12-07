@@ -3,11 +3,21 @@
 //
 #include "client/channel.h"
 #include "rpc/controller.h"
+#include "rpc/closure.h"
 #include "calculate_service.pb.h"
 #include <vector>
 #include <thread>
 #include <atomic>
 
+//void HandleResponse(tinyRPC::rpc_error::error_code ec, google::protobuf::Message* response) {
+//    if(ec.ok()) {
+//        auto* resp = dynamic_cast<AddResponse*>(response);
+//        std::cout << resp->result() << std::endl;
+//    }
+//    else {
+//        std::cout << ec.message() << std::endl;
+//    }
+//}
 
 int main() {
 

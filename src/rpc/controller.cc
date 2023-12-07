@@ -8,9 +8,9 @@ namespace tinyRPC {
 
     void Controller::Reset() {}
 
-    bool Controller::Failed() const {}
+    bool Controller::Failed() const { return false; }
 
-    std::string Controller::ErrorText() const {}
+    std::string Controller::ErrorText() const { return ""; }
 
     void Controller::StartCancel() {}
 
@@ -26,6 +26,10 @@ namespace tinyRPC {
     void Controller::SetTimeout(int milliseconds) { connect_timeout_ = milliseconds; }
 
     std::optional<int> Controller::Timeout() { return connect_timeout_; }
+
+    void Controller::SetAsync(bool set) { async_ = set; }
+
+    bool Controller::Async() const { return async_; }
 
     void Controller::SetFailed(const std::string& reason) {}
 

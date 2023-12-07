@@ -32,6 +32,10 @@ namespace tinyRPC {
 
         std::optional<int> Timeout();
 
+        void SetAsync(bool set);
+
+        bool Async() const;
+
         // Server-side methods ---------------------------------------------
         // These calls may be made from the server side only.  Their results
         // are undefined on the client side (may crash).
@@ -45,6 +49,7 @@ namespace tinyRPC {
     private:
         std::optional<std::string> req_id_{std::nullopt};
         std::optional<int> connect_timeout_{std::nullopt};
+        bool async_{false};
     };
 
 }

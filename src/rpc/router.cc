@@ -40,10 +40,9 @@ namespace tinyRPC {
             return response;
         }
         Controller controller;
-        RpcClosure closure([](){});
         try {
             service->CallMethod(method, &controller,request_message.get(),
-                                response_message.get(), &closure);
+                                response_message.get(), nullptr);
         }
         catch (const std::exception& e) {
             response.ec_ = rpc_error::error_code::RPC_CALL_ERROR;

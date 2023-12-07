@@ -3,9 +3,11 @@
 //
 #include "client/client.h"
 #include "rpc/codec.h"
+#include "rpc/closure.h"
 #include "asio.hpp"
 #include <iostream>
 #include <queue>
+#include <google/protobuf/message.h>
 
 using namespace asio;
 using namespace asio::ip;
@@ -34,24 +36,38 @@ namespace tinyRPC {
         }
 
         std::future<RpcResponse> Call(const RpcRequest& request) {
-            if(!connected_) {
-                if(connect_timeout_) {
-                    auto status = connect_res_.wait_for(*connect_timeout_);
-                    if(status == std::future_status::ready) { connect_res_.get(); }
-                    else { throw connect_timeout(server_addr_, port_); }
-                }
-                else { connect_res_.get(); }
-            }
+            WaitForConnect();
             std::string data = codec_->Encode(request);
-            auto promise = std::make_shared<CallPromise>();
+            auto promise = new CallPromise;
             std::future<RpcResponse> fu = promise->get_future();
-            SendRequest(std::move(data), request.msg_id_, promise);
+            PendingCall call {
+                .type_ = PendingCall::PROMISE,
+                .promise_ = promise
+            };
+            SendRequest(std::move(data), request.msg_id_, call);
             return fu;
+        }
+
+        void Call(const RpcRequest& request, RpcClosure* closure) {
+            WaitForConnect();
+            std::string data = codec_->Encode(request);
+            PendingCall call {
+                    .type_ = PendingCall::CALLBACK,
+                    .closure_ = closure
+            };
+            SendRequest(std::move(data), request.msg_id_, call);
         }
 
     private:
         using CallPromise = std::promise<RpcResponse>;
-        using CallPromisePtr = std::shared_ptr<CallPromise>;
+
+        struct PendingCall {
+            enum CallType {PROMISE, CALLBACK} type_;
+            union  {
+                CallPromise* promise_;
+                RpcClosure* closure_;
+            };
+        };
 
         void Connect(ip::tcp::resolver::results_type& endpoints) {
             connect_res_ = connect_promise_.get_future();
@@ -69,9 +85,20 @@ namespace tinyRPC {
             });
         }
 
-        void SendRequest(std::string data, const std::string& id, CallPromisePtr promise) {
-            ioc_.post([this, d = std::move(data), id, p = std::move(promise)] () mutable {
-                pending_calls_[id] = p;
+        void WaitForConnect() {
+            if(!connected_) {
+                if(connect_timeout_) {
+                    auto status = connect_res_.wait_for(*connect_timeout_);
+                    if(status == std::future_status::ready) { connect_res_.get(); }
+                    else { throw connect_timeout(server_addr_, port_); }
+                }
+                else { connect_res_.get(); }
+            }
+        }
+
+        void SendRequest(std::string data, const std::string& id, PendingCall call) {
+            ioc_.post([this, d = std::move(data), id, call] () mutable {
+                pending_calls_[id] = call;
                 write_queue_.push(std::move(d));
                 if(write_queue_.size() == 1) { DoWrite(); }
             });
@@ -87,14 +114,35 @@ namespace tinyRPC {
                         auto pending_call = pending_calls_.find(resp.msg_id_);
                         if(pending_call == pending_calls_.end()) { continue; }
                         if(resp.ec_ == rpc_error::error_code::RPC_SUCCESS) {
-                            pending_call->second->set_value(std::move(resp));
+                            if(pending_call->second.type_ == PendingCall::PROMISE) {
+                                pending_call->second.promise_->set_value(std::move(resp));
+                            }
+                            else if(pending_call->second.closure_) {
+                                RpcClosure* closure = pending_call->second.closure_;
+                                auto response = closure->GetResponse();
+                                if(!response->ParseFromString(resp.data_)) {
+                                    rpc_error::error_code rpc_ec(rpc_error::error_code::RPC_PARSE_ERROR);
+                                    closure->SetErrorCode(std::move(rpc_ec));
+                                }
+                                closure->Run();
+                                delete closure;
+                            }
                         }
                         else {
                             rpc_error::error_code rpc_ec(static_cast<rpc_error::error_code::error>(resp.ec_),
                                                          resp.error_detail_);
-                            rpc_error error(rpc_ec);
-                            pending_call->second->set_exception(std::make_exception_ptr(error));
+                            if(pending_call->second.type_ == PendingCall::PROMISE) {
+                                rpc_error error(rpc_ec);
+                                pending_call->second.promise_->set_exception(std::make_exception_ptr(error));
+                            }
+                            else if(pending_call->second.closure_) {
+                                RpcClosure* closure = pending_call->second.closure_;
+                                closure->SetErrorCode(std::move(rpc_ec));
+                                closure->Run();
+                                delete closure;
+                            }
                         }
+                        pending_calls_.erase(pending_call);
                     }
                     DoRead();
                 }
@@ -126,7 +174,7 @@ namespace tinyRPC {
         std::promise<void> connect_promise_;
         std::future<void> connect_res_;
         std::queue<std::string> write_queue_;
-        std::unordered_map<std::string, CallPromisePtr> pending_calls_;
+        std::unordered_map<std::string, PendingCall> pending_calls_;
         std::optional<std::chrono::milliseconds> connect_timeout_;
         bool connected_{false};
         std::string server_addr_;
@@ -139,6 +187,11 @@ namespace tinyRPC {
     }
 
     std::future<RpcResponse> Client::Call(const RpcRequest &request) { return pimpl_->Call(request); }
+
+    void Client::Call(const RpcRequest& request, google::protobuf::Closure* closure) {
+        auto rpc_closure = dynamic_cast<RpcClosure*>(closure);
+        pimpl_->Call(request, rpc_closure);
+    }
 
     void Client::SetConnectTimeout(int milli) { pimpl_->SetConnectTimeout(milli); }
 
