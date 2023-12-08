@@ -15,7 +15,7 @@ namespace tinyRPC {
     class Codec {
     public:
 
-        const static size_t MaxReadBytes = 65536;
+        const static size_t MaxReadBytes = 8192;
 
         enum class DecodeResult {SUCCESS, DECODING, FAILED};
 

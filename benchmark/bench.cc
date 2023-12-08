@@ -8,7 +8,7 @@ using namespace tinyRPC;
 
 
 int main() {
-    Bench bench(&CalculateService_Stub::Add, "localhost", 9999, 3);
+    Bench bench(&CalculateService_Stub::Add, "localhost", 9999, 4);
 
     bench.SetQueryInitializer([](AddQuery* addQuery) {
         addQuery->set_a(100);

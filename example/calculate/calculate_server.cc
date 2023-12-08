@@ -13,15 +13,13 @@ public:
              ::AddResponse* response,
              ::google::protobuf::Closure* done) override {
         response->set_result(request->a() + request->b());
-        cnt++;
-        if(cnt == 500000) {std::cout << "500000" << std::endl;}
         if(done) { done->Run(); }
     }
 };
 
 int main() {
     tinyRPC::Server server(9999);
-    server.SetWorkerNum(5);
+    server.SetWorkerNum(10);
     server.RegisterService(std::make_shared<CalculateServiceImpl>());
     server.Serve();
 }
