@@ -85,12 +85,17 @@ namespace tinyRPC {
             }
 
             void HandleCallFinish(rpc_error::error_code ec, google::protobuf::Message*) {
-                request_num_--;
-                if(request_num_ == 0) {
-                    bench_->latch_->CountDown();
-                    return;
+                if(ec.ok()) {
+                    request_num_--;
+                    if(request_num_ == 0) {
+                        bench_->latch_->CountDown();
+                        return;
+                    }
+                    NewRequest();
                 }
-                NewRequest();
+                else {
+                    std::cout << "rpc failed: " << ec.message() << std::endl;
+                }
             }
 
             void WaitConnectDone() { channel_.WaitForConnect(); }
