@@ -11,6 +11,11 @@ namespace tinyRPC {
 
     Channel::Channel(const std::string &address, uint16_t port): client_(address, port) {}
 
+    Channel::Channel(asio::io_context *ctx, const std::string &address, uint16_t port):
+    client_(ctx, address, port) {}
+
+    void Channel::WaitForConnect() { client_.WaitForConnect(); }
+
     void Channel::CallMethod(const google::protobuf::MethodDescriptor *method,
                         google::protobuf::RpcController *controller,
                         const google::protobuf::Message *request,

@@ -21,7 +21,7 @@ namespace tinyRPC {
 
         void RegisterService(ServicePtr service);
 
-        bool ParseServiceMethod(const std::string& full_name, std::string& service, std::string& method) const;
+        static bool ParseServiceMethod(const std::string& full_name, std::string& service, std::string& method) ;
 
         ServicePtr GetService(const std::string& service) const;
 

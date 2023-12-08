@@ -16,7 +16,7 @@ namespace tinyRPC {
         service_map_[name] = service;
     }
 
-    bool Router::ParseServiceMethod(const std::string &full_name, std::string& service, std::string& method) const {
+    bool Router::ParseServiceMethod(const std::string &full_name, std::string& service, std::string& method) {
         size_t dot = full_name.find('.');
         if(dot == std::string::npos) { return false; }
         service = full_name.substr(0, dot);

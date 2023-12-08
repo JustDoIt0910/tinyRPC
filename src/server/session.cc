@@ -10,13 +10,13 @@
 
 namespace tinyRPC {
 
-    Session::Session(Server* server, io_context& ioc,
+    Session::Session(Server* server, io_context& ioc, ip::tcp::socket sock,
                      std::unique_ptr<Codec>& codec, Router* router):
     server_(server),
     ioc_(ioc),
     codec_(std::move(codec)),
     router_(router),
-    socket_(ioc_),
+    socket_(std::move(sock)),
     read_strand_(ioc_),
     write_strand_(ioc_),
     closing_(false) {}
@@ -29,8 +29,6 @@ namespace tinyRPC {
         id_ = std::string(buf);
         DoRead();
     }
-
-    ip::tcp::socket& Session::Socket() { return socket_; }
 
     std::string& Session::Id() { return id_; }
 

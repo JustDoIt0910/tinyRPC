@@ -37,4 +37,5 @@ set(LIBS ${PROJECT_NAME}
 
 #add_subdirectory(test)
 add_subdirectory(example/calculate)
+add_subdirectory(benchmark)
 

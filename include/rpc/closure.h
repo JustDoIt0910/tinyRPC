@@ -10,14 +10,15 @@
 #include <functional>
 #include <utility>
 
+using namespace google::protobuf;
+
 namespace tinyRPC {
 
-    using Handler = std::function<void(rpc_error::error_code, google::protobuf::Message*)>;
+    using Handler = std::function<void(rpc_error::error_code, Message*)>;
 
     class RpcClosure: public google::protobuf::Closure {
     public:
-        explicit RpcClosure(Handler cb,
-                            const google::protobuf::Descriptor* response_message_descriptor):
+        explicit RpcClosure(Handler cb, const Descriptor* response_message_descriptor):
         response_type_desc_(response_message_descriptor) {
             cb_ = [this, cb = std::move(cb)] () {
                 cb(ec_, response_);
@@ -28,13 +29,13 @@ namespace tinyRPC {
 
         google::protobuf::Message* GetResponse() {
             if(!response_) {
-                auto prototype = google::protobuf::MessageFactory::generated_factory()->GetPrototype(response_type_desc_);
+                auto prototype = MessageFactory::generated_factory()->GetPrototype(response_type_desc_);
                 response_ = prototype->New();
             }
             return response_;
         }
 
-        ~RpcClosure() override = default;
+        ~RpcClosure() override { delete response_; }
 
         void Run() override {
             if(cb_) { cb_(); }
@@ -48,7 +49,7 @@ namespace tinyRPC {
     };
 
     template<typename ResponseMessage>
-    inline RpcClosure* NewRpcClosure(Handler cb) {
+    inline RpcClosure* MakeRpcClosure(Handler cb) {
         return new RpcClosure(cb, ResponseMessage::descriptor());
     }
 }

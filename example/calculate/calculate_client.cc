@@ -5,19 +5,20 @@
 #include "rpc/controller.h"
 #include "rpc/closure.h"
 #include "calculate_service.pb.h"
+#include "asio/io_context.hpp"
 #include <vector>
 #include <thread>
 #include <atomic>
 
-//void HandleResponse(tinyRPC::rpc_error::error_code ec, google::protobuf::Message* response) {
-//    if(ec.ok()) {
-//        auto* resp = dynamic_cast<AddResponse*>(response);
-//        std::cout << resp->result() << std::endl;
-//    }
-//    else {
-//        std::cout << ec.message() << std::endl;
-//    }
-//}
+void HandleResponse(tinyRPC::rpc_error::error_code ec, google::protobuf::Message* response) {
+    if(ec.ok()) {
+        auto* resp = dynamic_cast<AddResponse*>(response);
+        std::cout << resp->result() << std::endl;
+    }
+    else {
+        std::cout << ec.message() << std::endl;
+    }
+}
 
 int main() {
 
@@ -59,5 +60,16 @@ int main() {
     double s = t / 1000.0;
     std::cout << 90000 / s << " calls/second" << std::endl;
     std::cout << cnt << std::endl;
+
+//    tinyRPC::Channel channel("localhost", 9999);
+//    CalculateService_Stub stub(&channel);
+//    tinyRPC::Controller controller;
+//    controller.SetAsync(true);
+//    AddQuery query;
+//    query.set_a(10);
+//    query.set_b(20);
+//
+//    auto closure = tinyRPC::MakeRpcClosure<AddResponse>(HandleResponse);
+//    stub.Add(&controller, &query, nullptr, closure);
 
 }

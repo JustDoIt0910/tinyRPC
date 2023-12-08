@@ -9,6 +9,7 @@
 #include "rpc/message.h"
 
 namespace google::protobuf { class Closure; }
+namespace asio { class io_context; }
 
 namespace tinyRPC {
 
@@ -16,11 +17,15 @@ namespace tinyRPC {
     public:
         Client(const std::string& address, uint16_t port);
 
+        Client(asio::io_context* ctx, const std::string& address, uint16_t port);
+
+        void SetConnectTimeout(int milliseconds);
+
+        void WaitForConnect();
+
         std::future<RpcResponse> Call(const RpcRequest& request);
 
         void Call(const RpcRequest& request, google::protobuf::Closure* closure);
-
-        void SetConnectTimeout(int milliseconds);
 
         ~Client();
 

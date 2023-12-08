@@ -42,14 +42,14 @@ namespace tinyRPC {
         }
 
         void StartAccept() {
-            std::unique_ptr<Codec> codec;
-            if(server_->Protocol() == RpcProtocol::PROTOBUF) {
-                codec = std::make_unique<ProtobufRpcCodec>();
-            }
-            session_ptr session = std::make_shared<Session>(server_, ioc_, codec, router_.get());
-            acceptor_.async_accept(session->Socket(), [this, session] (std::error_code ec) {
+            acceptor_.async_accept([this] (std::error_code ec, ip::tcp::socket socket) {
+                std::unique_ptr<Codec> codec;
+                if(server_->Protocol() == RpcProtocol::PROTOBUF) {
+                    codec = std::make_unique<ProtobufRpcCodec>();
+                }
+                session_ptr session = std::make_shared<Session>(server_, ioc_, std::move(socket),
+                                                                codec, router_.get());
                 session->Start();
-                std::lock_guard<std::mutex> lg(sessions_mu_);
                 sessions_[session->Id()] = session;
                 StartAccept();
             });
@@ -58,6 +58,7 @@ namespace tinyRPC {
         void Run() { ioc_.run(); }
 
     private:
+
         using session_ptr = std::shared_ptr<Session>;
 
         io_context ioc_;

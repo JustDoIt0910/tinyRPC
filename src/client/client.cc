@@ -7,6 +7,8 @@
 #include "asio.hpp"
 #include <iostream>
 #include <queue>
+#include <atomic>
+#include <utility>
 #include <google/protobuf/message.h>
 
 using namespace asio;
@@ -16,23 +18,49 @@ namespace tinyRPC {
 
     class Client::Impl {
     public:
-        Impl(const std::string &address, uint16_t port):
-        socket_(ioc_), server_addr_(address), port_(port) {
+        void Init() {
             codec_ = std::make_unique<ProtobufRpcCodec>();
-            tcp::resolver resolver(ioc_);
-            auto endpoints = resolver.resolve(address, std::to_string(port));
+            tcp::resolver resolver(*ioc_);
+            auto endpoints = resolver.resolve(server_addr_, std::to_string(port_));
             Connect(endpoints);
         }
 
-        void Start() { io_thread_ = std::thread([this] () { ioc_.run(); }); }
+        Impl(std::string address, uint16_t port):
+        ioc_(new io_context),
+        socket_(*ioc_),
+        server_addr_(std::move(address)),
+        port_(port),
+        own_io_context_(true) { Init(); }
+
+        Impl(io_context* ctx, std::string address, uint16_t port):
+        ioc_(ctx),
+        socket_(*ioc_),
+        server_addr_(std::move(address)),
+        port_(port),
+        own_io_context_(false) { Init(); }
+
+        void Start() { io_thread_ = std::thread([this] () { ioc_->run(); }); }
 
         void SetConnectTimeout(int seconds) {
             connect_timeout_ = std::chrono::milliseconds(seconds);
         }
 
         void Stop() {
-            ioc_.stop();
-            io_thread_.join();
+            if(own_io_context_) {
+                ioc_->stop();
+                io_thread_.join();
+            }
+        }
+
+        void WaitForConnect() {
+            if(!connected_.load()) {
+                if(connect_timeout_) {
+                    auto status = connect_res_.wait_for(*connect_timeout_);
+                    if(status == std::future_status::ready) { connect_res_.get(); }
+                    else { throw connect_timeout(server_addr_, port_); }
+                }
+                else { connect_res_.get(); }
+            }
         }
 
         std::future<RpcResponse> Call(const RpcRequest& request) {
@@ -58,6 +86,8 @@ namespace tinyRPC {
             SendRequest(std::move(data), request.msg_id_, call);
         }
 
+        ~Impl() { if(own_io_context_) { delete ioc_; } }
+
     private:
         using CallPromise = std::promise<RpcResponse>;
 
@@ -74,7 +104,7 @@ namespace tinyRPC {
             async_connect(socket_, endpoints,
                           [this](std::error_code ec, const tcp::endpoint&) {
                 if(!ec) {
-                    connected_ = true;
+                    connected_.store(true);
                     connect_promise_.set_value();
                     DoRead();
                 }
@@ -85,19 +115,8 @@ namespace tinyRPC {
             });
         }
 
-        void WaitForConnect() {
-            if(!connected_) {
-                if(connect_timeout_) {
-                    auto status = connect_res_.wait_for(*connect_timeout_);
-                    if(status == std::future_status::ready) { connect_res_.get(); }
-                    else { throw connect_timeout(server_addr_, port_); }
-                }
-                else { connect_res_.get(); }
-            }
-        }
-
         void SendRequest(std::string data, const std::string& id, PendingCall call) {
-            ioc_.post([this, d = std::move(data), id, call] () mutable {
+            ioc_->post([this, d = std::move(data), id, call] () mutable {
                 pending_calls_[id] = call;
                 write_queue_.push(std::move(d));
                 if(write_queue_.size() == 1) { DoWrite(); }
@@ -116,6 +135,7 @@ namespace tinyRPC {
                         if(resp.ec_ == rpc_error::error_code::RPC_SUCCESS) {
                             if(pending_call->second.type_ == PendingCall::PROMISE) {
                                 pending_call->second.promise_->set_value(std::move(resp));
+                                delete pending_call->second.promise_;
                             }
                             else if(pending_call->second.closure_) {
                                 RpcClosure* closure = pending_call->second.closure_;
@@ -134,6 +154,7 @@ namespace tinyRPC {
                             if(pending_call->second.type_ == PendingCall::PROMISE) {
                                 rpc_error error(rpc_ec);
                                 pending_call->second.promise_->set_exception(std::make_exception_ptr(error));
+                                delete pending_call->second.promise_;
                             }
                             else if(pending_call->second.closure_) {
                                 RpcClosure* closure = pending_call->second.closure_;
@@ -167,7 +188,8 @@ namespace tinyRPC {
             });
         }
 
-        io_context ioc_;
+        io_context* ioc_;
+        bool own_io_context_;
         tcp::socket socket_;
         std::thread io_thread_;
         std::unique_ptr<Codec> codec_;
@@ -176,7 +198,7 @@ namespace tinyRPC {
         std::queue<std::string> write_queue_;
         std::unordered_map<std::string, PendingCall> pending_calls_;
         std::optional<std::chrono::milliseconds> connect_timeout_;
-        bool connected_{false};
+        std::atomic_bool connected_{false};
         std::string server_addr_;
         uint16_t port_;
     };
@@ -186,12 +208,18 @@ namespace tinyRPC {
         pimpl_->Start();
     }
 
+    Client::Client(io_context *ctx, const std::string &address, uint16_t port) {
+        pimpl_ = std::make_unique<Impl>(ctx, address, port);
+    }
+
     std::future<RpcResponse> Client::Call(const RpcRequest &request) { return pimpl_->Call(request); }
 
     void Client::Call(const RpcRequest& request, google::protobuf::Closure* closure) {
         auto rpc_closure = dynamic_cast<RpcClosure*>(closure);
         pimpl_->Call(request, rpc_closure);
     }
+
+    void Client::WaitForConnect() { pimpl_->WaitForConnect(); }
 
     void Client::SetConnectTimeout(int milli) { pimpl_->SetConnectTimeout(milli); }
 

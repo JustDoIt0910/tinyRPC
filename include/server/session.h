@@ -17,11 +17,10 @@ namespace tinyRPC {
 
 class Session: public std::enable_shared_from_this<Session>{
     public:
-        Session(Server* server, io_context& ioc, std::unique_ptr<Codec>& codec, Router* router);
+        Session(Server* server, io_context& ioc, ip::tcp::socket sock,
+                std::unique_ptr<Codec>& codec, Router* router);
 
         void Start();
-
-        ip::tcp::socket& Socket();
 
         std::string& Id();
 
