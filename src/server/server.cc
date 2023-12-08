@@ -50,6 +50,7 @@ namespace tinyRPC {
                 session_ptr session = std::make_shared<Session>(server_, ioc_, std::move(socket),
                                                                 codec, router_.get());
                 session->Start();
+                std::lock_guard lg(sessions_mu_);
                 sessions_[session->Id()] = session;
                 StartAccept();
             });
