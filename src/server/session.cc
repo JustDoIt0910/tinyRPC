@@ -3,8 +3,8 @@
 //
 #include "server/session.h"
 #include "server/server.h"
-#include "rpc/codec.h"
-#include "rpc/abstract_router.h"
+#include "codec/protobuf_codec.h"
+#include "router/base_router.h"
 #include <cstdio>
 #include <iostream>
 
@@ -55,7 +55,11 @@ namespace tinyRPC {
             else if(ec == error::eof || ec == error::connection_reset) {
                 closing_.store(true);
                 write_strand_.post([this, self] () {
-                    socket_.shutdown(socket_base::shutdown_both);
+                    std::error_code e;
+                    e = socket_.shutdown(ip::tcp::socket::shutdown_both, e);
+                    if(e) {
+
+                    }
                     socket_.close();
                     server_->RemoveSession(id_);
                 });

@@ -8,7 +8,7 @@
 #include "google/protobuf/descriptor.h"
 #include "google/protobuf/io/zero_copy_stream.h"
 #include "google/protobuf/io/printer.h"
-#include "../../example/calculate/method_ext.pb.h"
+#include "../plugin/proto/method_ext.pb.h"
 
 using namespace google::protobuf;
 using namespace google::protobuf::io;

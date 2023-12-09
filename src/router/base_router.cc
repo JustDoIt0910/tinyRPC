@@ -1,18 +1,33 @@
 //
-// Created by just do it on 2023/12/2.
+// Created by just do it on 2023/12/5.
 //
-#include "rpc/router.h"
+#include "router/base_router.h"
 #include "rpc/message.h"
 #include "rpc/controller.h"
-#include "rpc/closure.h"
-#include <google/protobuf/descriptor.h>
 #include <google/protobuf/message.h>
+#include <google/protobuf/descriptor.h>
 
 using namespace google;
 
 namespace tinyRPC {
 
-    RpcResponse ProtobufRpcRouter::Route(const RpcRequest &request) const {
+    void Router::RegisterService(const tinyRPC::ServicePtr& service) {
+        std::string name = service->GetDescriptor()->full_name();
+        if(service_map_.find(name) != service_map_.end()) {
+            // TODO use log library
+            std::cout << "Service " << name << " has already registered" << std::endl;
+            return;
+        }
+        service_map_[name] = service;
+    }
+
+    ServicePtr Router::GetService(const std::string &service) const {
+        auto it = service_map_.find(service);
+        if(it == service_map_.end()) { return ServicePtr{}; }
+        return it->second;
+    }
+
+    RpcResponse Router::Route(const RpcRequest &request) const {
         RpcResponse response;
         response.msg_id_ = request.msg_id_;
         std::string service_name, method_name;
@@ -35,7 +50,7 @@ namespace tinyRPC {
         }
         std::unique_ptr<protobuf::Message> request_message(service->GetRequestPrototype(method).New());
         std::unique_ptr<protobuf::Message> response_message(service->GetResponsePrototype(method).New());
-        if(!request_message->ParseFromString(request.data_)) {
+        if(!ParseRequestData(response_message.get(), request.data_)) {
             response.ec_ = rpc_error::error_code::RPC_BAD_DATA;
             return response;
         }
@@ -49,7 +64,7 @@ namespace tinyRPC {
             response.error_detail_ = e.what();
             return response;
         }
-        if(!response_message->SerializeToString(&response.data_)) {
+        if(!SerializeResponseData(response_message.get(), &response.data_)) {
             response.ec_ = rpc_error::error_code::RPC_SERIALIZE_ERROR;
             return response;
         }

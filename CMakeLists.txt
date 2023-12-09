@@ -14,10 +14,11 @@ include_directories(${CMAKE_SOURCE_DIR}/include
 add_library(${PROJECT_NAME}
         src/server/server.cc
         src/server/session.cc
-        src/rpc/abstract_codec.cc
-        src/rpc/abstract_router.cc
-        src/rpc/router.cc
-        src/rpc/codec.cc
+        src/codec/abstract_codec.cc
+        src/router/base_router.cc
+        src/router/router.cc
+        src/codec/protobuf_codec.cc
+        src/codec/http_codec.cc
         src/rpc/error.cc
         src/rpc/controller.cc
         src/client/client.cc
@@ -35,7 +36,7 @@ set(LIBS ${PROJECT_NAME}
         pthread
         uuid)
 
-#add_subdirectory(test)
+add_subdirectory(test)
 add_subdirectory(example/calculate)
 add_subdirectory(benchmark)
 

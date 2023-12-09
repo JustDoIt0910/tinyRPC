@@ -8,26 +8,29 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include "asio.hpp"
 
 namespace google::protobuf { class Service; }
 
 namespace tinyRPC {
 
+    class Session;
+
     using ServicePtr = std::shared_ptr<google::protobuf::Service>;
 
     class Server {
     public:
-        enum class RpcProtocol {PROTOBUF, HTTP};
+        Server(const std::string& addr, uint16_t port);
 
-        Server(const std::string& addr, uint16_t port, RpcProtocol proto = RpcProtocol::PROTOBUF);
-
-        explicit Server(uint16_t port, RpcProtocol proto = RpcProtocol::PROTOBUF);
+        explicit Server(uint16_t port);
 
         void SetWorkerNum(int num);
 
         void RegisterService(ServicePtr service);
 
-        RpcProtocol Protocol();
+        asio::ip::tcp::acceptor GetAcceptor();
+
+        void AddSession(const std::shared_ptr<Session>& session);
 
         void Serve();
 
@@ -39,7 +42,6 @@ namespace tinyRPC {
 
         class Impl;
         std::unique_ptr<Impl> pimpl_;
-        RpcProtocol protocol_;
         std::vector<std::thread> workers_;
     };
 

@@ -42,7 +42,7 @@ namespace tinyRPC {
         }
 
         void Start(int num_connections, int num_request) {
-            latch_ = std::make_shared<CountdownLatch>(num_connections);
+            finish_latch_ = std::make_shared<CountdownLatch>(num_connections);
             int req_per_conn = num_request / num_connections;
             int req_last = num_request - req_per_conn * (num_connections - 1);
             int ioc_idx = 0;
@@ -60,7 +60,7 @@ namespace tinyRPC {
             std::cout << "connect done" << std::endl;
             auto start = std::chrono::steady_clock::now();
             for(auto& conn: connections_) { conn->Start(); }
-            latch_->Wait();
+            finish_latch_->Wait();
             auto end = std::chrono::steady_clock::now();
             double ms = std::chrono::duration<double, std::milli>(end - start).count();
             std::cout << num_request << " query complete. using " << ms << "ms" << std::endl;
@@ -88,7 +88,7 @@ namespace tinyRPC {
                 if(ec.ok()) {
                     request_num_--;
                     if(request_num_ == 0) {
-                        bench_->latch_->CountDown();
+                        bench_->finish_latch_->CountDown();
                         return;
                     }
                     NewRequest();
@@ -132,7 +132,7 @@ namespace tinyRPC {
         std::vector<std::thread> io_threads_;
         std::function<void(QueryType*)> query_initializer_;
         std::vector<std::shared_ptr<Connection>> connections_;
-        std::shared_ptr<CountdownLatch> latch_;
+        std::shared_ptr<CountdownLatch> finish_latch_;
     };
 
 }

@@ -1,7 +1,7 @@
 //
 // Created by just do it on 2023/12/5.
 //
-#include "rpc/abstract_codec.h"
+#include "codec/abstract_codec.h"
 
 namespace tinyRPC {
     void Codec::Consume(size_t length) {
@@ -26,4 +26,5 @@ namespace tinyRPC {
         write_index_ += length;
     }
 
+    char Codec::CRLF_[] = "\r\n";
 }

@@ -5,7 +5,7 @@
 #ifndef TINYRPC_ABSTRACT_CODEC_H
 #define TINYRPC_ABSTRACT_CODEC_H
 #include "comm/endian.h"
-#include "message.h"
+#include "rpc/message.h"
 #include "asio.hpp"
 
 using namespace asio;
@@ -44,10 +44,20 @@ namespace tinyRPC {
             }
         }
 
-        template<typename T=char*>
-        T Fetch() {
-            T val = *reinterpret_cast<T*>(Fetch());
+        template<typename T=const char*>
+        T Fetch() const {
+            const T val = *reinterpret_cast<const T*>(Fetch());
             return NetworkToHost(val);
+        }
+
+        const char* FindCRLF(const char* start, size_t* prev_searched) {
+            const char* end = Begin() + write_index_;
+            const char* pos = std::search(start, end, CRLF_, CRLF_ + 2);
+            if(pos == end) {
+                *prev_searched = (end - start) + *prev_searched;
+                return nullptr;
+            }
+            return pos;
         }
 
         template<typename T>
@@ -66,14 +76,18 @@ namespace tinyRPC {
         EncodeToBuffer(std::string& buffer, const T& val) { buffer.append(val); }
 
     private:
+        const char* Begin() const { return &*buffer_.begin(); }
+
         char tmp_[MaxReadBytes] = {0};
         std::vector<char> buffer_;
         size_t read_index_;
         size_t write_index_;
+
+        static char CRLF_[];
     };
 
     template<>
-    inline char* Codec::Fetch<char*>() { return static_cast<char*>(&buffer_[0]) + read_index_; }
+    inline const char* Codec::Fetch<const char*>() const { return Begin() + read_index_; }
 }
 
 #endif //TINYRPC_ABSTRACT_CODEC_H

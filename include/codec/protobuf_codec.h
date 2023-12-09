@@ -2,9 +2,12 @@
 // Created by just do it on 2023/12/2.
 //
 
-#ifndef TINYRPC_CODEC_H
-#define TINYRPC_CODEC_H
+#ifndef TINYRPC_PROTOBUF_CODEC_H
+#define TINYRPC_PROTOBUF_CODEC_H
 #include "abstract_codec.h"
+
+#define SAVE_STATE(state) { state_fn_ = &ProtobufRpcCodec::state; \
+                            return DecodeResult::DECODING; }
 
 namespace tinyRPC {
 
@@ -17,15 +20,22 @@ namespace tinyRPC {
         using method_name_len_t = uint8_t;
         using crc_t = uint32_t;
 
-        const static size_t RequestFixedSize = sizeof(total_len_t) + sizeof(message_id_len_t) +
-                sizeof(method_name_len_t) + sizeof(crc_t);
+        const static size_t RequestFixedSize =
+                sizeof(total_len_t) +
+                sizeof(message_id_len_t) +
+                sizeof(method_name_len_t) +
+                sizeof(crc_t);
 
         // field types in the rpc response packet
         using error_code_t = uint8_t;
         using error_len_t = uint8_t;
 
-        const static size_t ResponseFixedSize = sizeof(total_len_t) + sizeof(message_id_len_t) +
-                sizeof(error_code_t) + sizeof(error_len_t) + sizeof(crc_t);
+        const static size_t ResponseFixedSize =
+                sizeof(total_len_t) +
+                sizeof(message_id_len_t) +
+                sizeof(error_code_t) +
+                sizeof(error_len_t) +
+                sizeof(crc_t);
 
         DecodeResult Next(RpcMessage& message) override;
 
@@ -44,6 +54,7 @@ namespace tinyRPC {
 
         void ResetMessage() { message_.reset(); }
 
+
         DecodeResult DecodeTotalLen(RpcMessage&);
         DecodeResult DecodeMsgId(RpcMessage&);
         DecodeResult DecodeData(RpcMessage&);
@@ -59,6 +70,7 @@ namespace tinyRPC {
         uint32_t cur_field_len_;
         std::unique_ptr<RpcMessage> message_;
     };
+
 }
 
-#endif //TINYRPC_CODEC_H
+#endif //TINYRPC_PROTOBUF_CODEC_H

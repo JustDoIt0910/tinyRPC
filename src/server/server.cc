@@ -3,8 +3,8 @@
 //
 #include "server/server.h"
 #include "server/session.h"
-#include "rpc/codec.h"
-#include "rpc/router.h"
+#include "codec/protobuf_codec.h"
+#include "router/router.h"
 #include "asio.hpp"
 #include <unordered_map>
 #include <utility>
@@ -18,9 +18,7 @@ namespace tinyRPC {
         explicit Impl(const ip::tcp::endpoint& ep, Server* server):
         acceptor_(ioc_),
         server_(server) {
-            if(server->Protocol() == RpcProtocol::PROTOBUF) {
-                router_ = std::make_unique<ProtobufRpcRouter>();
-            }
+            router_ = std::make_unique<ProtobufRpcRouter>();
             acceptor_.open(ep.protocol());
             acceptor_.set_option(ip::tcp::acceptor::reuse_address(true));
             acceptor_.bind(ep);
@@ -43,23 +41,25 @@ namespace tinyRPC {
 
         void StartAccept() {
             acceptor_.async_accept([this] (std::error_code ec, ip::tcp::socket socket) {
-                std::unique_ptr<Codec> codec;
-                if(server_->Protocol() == RpcProtocol::PROTOBUF) {
-                    codec = std::make_unique<ProtobufRpcCodec>();
-                }
+                std::unique_ptr<Codec> codec = std::make_unique<ProtobufRpcCodec>();
                 session_ptr session = std::make_shared<Session>(server_, ioc_, std::move(socket),
                                                                 codec, router_.get());
-                session->Start();
+                AddSession(session);
                 std::lock_guard lg(sessions_mu_);
                 sessions_[session->Id()] = session;
                 StartAccept();
             });
         }
 
-        void Run() { ioc_.run(); }
+        void AddSession(const std::shared_ptr<Session>& session) {
+            session->Start();
+            std::lock_guard lg(sessions_mu_);
+            sessions_[session->Id()] = session;
+        }
+
+        io_context& GetContext() { return ioc_; };
 
     private:
-
         using session_ptr = std::shared_ptr<Session>;
 
         io_context ioc_;
@@ -70,21 +70,16 @@ namespace tinyRPC {
         std::unordered_map<std::string, session_ptr> sessions_;
     };
 
-    Server::Server(const std::string &address, uint16_t port, RpcProtocol proto):
-    protocol_(proto) {
+    Server::Server(const std::string &address, uint16_t port) {
         ip::address addr = ip::make_address(address);
         ip::tcp::endpoint ep(addr, port);
         pimpl_ = std::make_unique<Impl>(ep, this);
-        protocol_ = proto;
     }
 
-    Server::Server(uint16_t port, RpcProtocol proto):
-    protocol_(proto) {
+    Server::Server(uint16_t port) {
         ip::tcp::endpoint ep(ip::tcp::v4(), port);
         pimpl_ = std::make_unique<Impl>(ep, this);
     }
-
-    Server::RpcProtocol Server::Protocol() { return protocol_; }
 
     void Server::RegisterService(ServicePtr service) {
         pimpl_->RegisterService(std::move(service));
@@ -98,14 +93,22 @@ namespace tinyRPC {
 
     void Server::Serve() {
         pimpl_->StartAccept();
-        if(workers_.empty()) { pimpl_->Run(); }
+        io_context& ctx = pimpl_->GetContext();
+        if(workers_.empty()) { ctx.run(); }
         else {
             for(auto& worker : workers_) {
-                worker = std::thread([this](){ pimpl_->Run(); });
+                worker = std::thread([&ctx] () { ctx.run(); });
             }
             for(auto& worker : workers_) { worker.join(); }
         }
     }
+
+    ip::tcp::acceptor Server::GetAcceptor() {
+        ip::tcp::acceptor acceptor(pimpl_->GetContext());
+        return acceptor;
+    };
+
+    void Server::AddSession(const std::shared_ptr<Session>& session) { pimpl_->AddSession(session); }
 
     Server::~Server() = default;
 

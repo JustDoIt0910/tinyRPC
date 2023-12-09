@@ -1,7 +1,7 @@
 //
 // Created by just do it on 2023/12/7.
 //
-#include "bench.h"
+#include "tool/bench.h"
 #include "calculate_service.pb.h"
 
 using namespace tinyRPC;
@@ -15,6 +15,6 @@ int main() {
         addQuery->set_b(500);
     });
 
-    bench.Start(5000, 500000);
+    bench.Start(2000, 500000);
 }
 

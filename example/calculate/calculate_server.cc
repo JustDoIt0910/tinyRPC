@@ -7,7 +7,6 @@
 
 class CalculateServiceImpl: public CalculateService {
 public:
-    std::atomic<int> cnt{0};
     void Add(::google::protobuf::RpcController* controller,
              const ::AddQuery* request,
              ::AddResponse* response,
@@ -19,7 +18,7 @@ public:
 
 int main() {
     tinyRPC::Server server(9999);
-    server.SetWorkerNum(10);
+    server.SetWorkerNum(16);
     server.RegisterService(std::make_shared<CalculateServiceImpl>());
     server.Serve();
 }
