@@ -75,6 +75,13 @@ namespace tinyRPC {
         std::enable_if_t<std::is_same_v<T, std::string>>
         EncodeToBuffer(std::string& buffer, const T& val) { buffer.append(val); }
 
+        std::unique_ptr<rpc_error::error_code> GetError() { return std::move(decode_error_); }
+
+    protected:
+        void SetError(rpc_error::error_code ec) {
+            decode_error_ = std::make_unique<rpc_error::error_code>(std::move(ec));
+        }
+
     private:
         const char* Begin() const { return &*buffer_.begin(); }
 
@@ -82,6 +89,7 @@ namespace tinyRPC {
         std::vector<char> buffer_;
         size_t read_index_;
         size_t write_index_;
+        std::unique_ptr<rpc_error::error_code> decode_error_;
 
         static char CRLF_[];
     };

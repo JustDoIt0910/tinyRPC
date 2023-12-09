@@ -15,6 +15,7 @@ namespace tinyRPC {
         enum Method { GET, POST, PUT, DELETE } method_;
         std::string url_;
         std::unordered_map<std::string, std::string> headers_;
+        std::string body_;
     };
 
     class HttpRpcCodec: public Codec {
@@ -25,10 +26,14 @@ namespace tinyRPC {
 
     private:
         bool NextLine(std::string& line);
-        DecodeResult DecodeRequestLine(RpcMessage& message);
+        DecodeResult DecodeRequestLine(RpcMessage&);
+        DecodeResult DecodeHeaders(RpcMessage&);
+        DecodeResult DecodeBody(RpcMessage&);
+        DecodeResult Done(DecodeResult res, RpcMessage&);
 
         DecodeResult (HttpRpcCodec::*state_fn_)(RpcMessage&){nullptr};
         size_t prev_crlf_searched_{0};
+        std::unique_ptr<HttpRequest> http_request_;
     };
 
 }

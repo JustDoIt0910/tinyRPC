@@ -23,7 +23,8 @@ namespace tinyRPC {
                 RPC_BAD_DATA,
                 RPC_CALL_ERROR,
                 RPC_SERIALIZE_ERROR,
-                RPC_PARSE_ERROR
+                RPC_PARSE_ERROR,
+                RPC_HTTP_METHOD_NOT_ALLOWED
             };
 
             explicit error_code(error err = RPC_SUCCESS, std::string detail = "");
