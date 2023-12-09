@@ -6,5 +6,7 @@ add_executable(test_codec test_codec.cc)
 #add_executable(protoc-gen-myplg test_plugin.cc)
 #target_link_libraries(protoc-gen-myplg protoc)
 
+add_executable(test_json_message test_json_message.cc ../example/calculate/calculate_service.pb.cc)
+
 add_executable(test_http_gw test_http_gw.cc)
 

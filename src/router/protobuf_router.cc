@@ -1,7 +1,7 @@
 //
 // Created by just do it on 2023/12/2.
 //
-#include "router/router.h"
+#include "router/protobuf_router.h"
 #include <google/protobuf/message.h>
 
 using namespace google;
@@ -23,7 +23,7 @@ namespace tinyRPC {
         return message->ParseFromString(data);
     }
 
-    bool ProtobufRpcRouter::SerializeResponseData(google::protobuf::Message *message,
+    bool ProtobufRpcRouter::SerializeResponseData(const google::protobuf::Message *message,
                                                   std::string *data) const {
         return message->SerializeToString(data);
     }

@@ -29,7 +29,9 @@ namespace tinyRPC {
             "Ok", "Invalid RPC name", "No such service",
             "No such method", "Failed to parse RPC data",
             "Exception raised in procedure call", "Failed to serialize data",
-            "Failed to parse data", "HTTP method not allowed"
+            "Failed to parse data", "HTTP method not allowed",
+            "Bad HTTP request", "Content-Length is required",
+            "Unsupported media type", "Unsupported HTTP version"
     };
 
 

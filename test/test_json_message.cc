@@ -16,4 +16,15 @@ int main() {
     if(status.ok()) {
         std::cout << json << std::endl;
     }
+
+    // reflection test
+//    Message* message = &query;
+//    auto desc = message->GetDescriptor();
+//    auto field = desc->FindFieldByName("a");
+//    if(field) {
+//        auto refl = message->GetReflection();
+//        refl->SetInt32(message, field, 123);
+//    }
+//
+//    std::cout << query.a() << std::endl;
 }

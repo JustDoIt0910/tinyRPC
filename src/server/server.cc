@@ -4,7 +4,7 @@
 #include "server/server.h"
 #include "server/session.h"
 #include "codec/protobuf_codec.h"
-#include "router/router.h"
+#include "router/protobuf_router.h"
 #include "asio.hpp"
 #include <unordered_map>
 #include <utility>
@@ -25,7 +25,7 @@ namespace tinyRPC {
             acceptor_.listen();
         }
 
-        void RegisterService(ServicePtr service) { router_->RegisterService(std::move(service)); }
+        void RegisterService(ServicePtr service) { router_->RegisterService(service); }
 
         void RemoveSession(const std::string& session_id) {
             std::shared_ptr<Session> session;
@@ -42,16 +42,13 @@ namespace tinyRPC {
         void StartAccept() {
             acceptor_.async_accept([this] (std::error_code ec, ip::tcp::socket socket) {
                 std::unique_ptr<Codec> codec = std::make_unique<ProtobufRpcCodec>();
-                session_ptr session = std::make_shared<Session>(server_, ioc_, std::move(socket),
-                                                                codec, router_.get());
-                AddSession(session);
-                std::lock_guard lg(sessions_mu_);
-                sessions_[session->Id()] = session;
+                NewSession(socket, codec, router_.get());
                 StartAccept();
             });
         }
 
-        void AddSession(const std::shared_ptr<Session>& session) {
+        void NewSession(ip::tcp::socket& socket, std::unique_ptr<Codec>& codec, Router* router) {
+            session_ptr session = std::make_shared<Session>(server_, ioc_, socket, codec, router);
             session->Start();
             std::lock_guard lg(sessions_mu_);
             sessions_[session->Id()] = session;
@@ -108,7 +105,9 @@ namespace tinyRPC {
         return acceptor;
     };
 
-    void Server::AddSession(const std::shared_ptr<Session>& session) { pimpl_->AddSession(session); }
+    void Server::NewSession(ip::tcp::socket& socket, std::unique_ptr<Codec>& codec, Router* router) {
+        pimpl_->NewSession(socket, codec, router);
+    }
 
     Server::~Server() = default;
 

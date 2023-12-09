@@ -28,14 +28,14 @@ namespace tinyRPC {
         virtual bool ParseRequestData(google::protobuf::Message* message,
                                       const std::string& data) const = 0;
 
-        virtual bool SerializeResponseData(google::protobuf::Message* message,
+        virtual bool SerializeResponseData(const google::protobuf::Message* message,
                                            std::string* data) const = 0;
-
-        ServicePtr GetService(const std::string& service) const;
 
         virtual ~Router() = default;
 
     private:
+        ServicePtr GetService(const std::string& service) const;
+
         std::unordered_map<std::string, ServicePtr> service_map_;
     };
 

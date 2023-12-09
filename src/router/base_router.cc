@@ -21,7 +21,7 @@ namespace tinyRPC {
         service_map_[name] = service;
     }
 
-    ServicePtr Router::GetService(const std::string &service) const {
+    ServicePtr Router::GetService(const std::string& service) const {
         auto it = service_map_.find(service);
         if(it == service_map_.end()) { return ServicePtr{}; }
         return it->second;

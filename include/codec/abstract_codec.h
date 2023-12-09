@@ -50,7 +50,7 @@ namespace tinyRPC {
             return NetworkToHost(val);
         }
 
-        const char* FindCRLF(const char* start, size_t* prev_searched) {
+        const char* FindCRLF(const char* start, uint16_t* prev_searched) {
             const char* end = Begin() + write_index_;
             const char* pos = std::search(start, end, CRLF_, CRLF_ + 2);
             if(pos == end) {

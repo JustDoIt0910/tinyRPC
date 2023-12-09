@@ -16,7 +16,8 @@ add_library(${PROJECT_NAME}
         src/server/session.cc
         src/codec/abstract_codec.cc
         src/router/base_router.cc
-        src/router/router.cc
+        src/router/protobuf_router.cc
+        src/router/http_router.cc
         src/codec/protobuf_codec.cc
         src/codec/http_codec.cc
         src/rpc/error.cc

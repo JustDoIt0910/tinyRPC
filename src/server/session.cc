@@ -10,7 +10,7 @@
 
 namespace tinyRPC {
 
-    Session::Session(Server* server, io_context& ioc, ip::tcp::socket sock,
+    Session::Session(Server* server, io_context& ioc, ip::tcp::socket& sock,
                      std::unique_ptr<Codec>& codec, Router* router):
     server_(server),
     ioc_(ioc),
