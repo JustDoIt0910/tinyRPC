@@ -49,8 +49,8 @@ namespace tinyRPC {
                                                 const rpc_error::error_code &internal_error,
                                                 const std::string& query_id) {
         std::stringstream ss, err_ss;
-        err_ss << "{\n\t\"error code\": " << internal_error.code()
-        << ",\n\t\"message\": " << internal_error.message() << "\n}";
+        err_ss << "{\"error code\": " << internal_error.code()
+        << ",\"message\": " << internal_error.message() << "}";
         std::string err_resp = err_ss.str();
         ss << "HTTP/1.1 " << http_code << " " << reason
         << "\r\nContent-Type: application/json\r\nContent-Length: "
