@@ -3,6 +3,7 @@
 //
 #include "codec/http_codec.h"
 #include "comm/string_util.h"
+#include <sstream>
 #include <iostream>
 
 namespace tinyRPC {
@@ -16,7 +17,49 @@ namespace tinyRPC {
     }
 
     std::string HttpRpcCodec::Encode(const RpcMessage &message) {
+        std::string resp;
+        auto response = dynamic_cast<const RpcResponse&>(message);
+        if(response.ec_ == rpc_error::error_code::RPC_SUCCESS) {
+            std::stringstream ss;
+            ss << "HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: "
+            << response.data_.length() << "\r\n";
+            if(!response.msg_id_.empty()) {
+                ss << "Query-Id: " << response.msg_id_ << "\r\n";
+            }
+            ss << "\r\n" << response.data_;
+            resp = ss.str();
+        }
+        else {
+            rpc_error::error_code ec(static_cast<rpc_error::error_code::error>(response.ec_), response.error_detail_);
+            resp = MakeErrorResponse(500, "Internal Error", ec, response.msg_id_);
+        }
+        return resp;
+    }
 
+    std::string HttpRpcCodec::GetErrorResponse(const std::string& query_id) {
+        auto internal_error = GetError();
+        auto it = http_status_mapping_.find(internal_error->code());
+        assert(it != http_status_mapping_.end());
+        auto http_status = it->second;
+        return MakeErrorResponse(http_status.first, http_status.second,
+                                 *internal_error, query_id);
+    }
+
+    std::string HttpRpcCodec::MakeErrorResponse(int http_code, const std::string& reason,
+                                                const rpc_error::error_code &internal_error,
+                                                const std::string& query_id) {
+        std::stringstream ss, err_ss;
+        err_ss << "{\n\t\"error code\": " << internal_error.code()
+        << ",\n\t\"message\": " << internal_error.message() << "\n}";
+        std::string err_resp = err_ss.str();
+        ss << "HTTP/1.1 " << http_code << " " << reason
+        << "\r\nContent-Type: application/json\r\nContent-Length: "
+           << err_resp.length() << "\r\n";
+        if(!query_id.empty()) {
+            ss << "Query-Id: " << query_id << "\r\n";
+        }
+        ss << "\r\n" << err_resp;
+        return ss.str();
     }
 
     Codec::DecodeResult HttpRpcCodec::DecodeRequestLine(RpcMessage &message) {
@@ -29,7 +72,7 @@ namespace tinyRPC {
         http_request_->method_ != "put" && http_request_->method_ != "delete") {
             rpc_error::error_code ec(rpc_error::error_code::RPC_HTTP_METHOD_NOT_ALLOWED, http_request_->method_);
             SetError(std::move(ec));
-            return Done(Codec::DecodeResult::FAILED, message);
+            return Done(Codec::DecodeResult::FATAL, message);
         }
         line.erase(0, line.find(' '));
         auto url_start = line.find_first_not_of(' ');
@@ -40,7 +83,7 @@ namespace tinyRPC {
         if(version != "HTTP/1.1") {
             rpc_error::error_code ec(rpc_error::error_code::RPC_HTTP_VERSION_NOT_SUPPORTED, version);
             SetError(std::move(ec));
-            return Done(Codec::DecodeResult::FAILED, message);
+            return Done(Codec::DecodeResult::FATAL, message);
         }
         return DecodeHeaders(message);
     }
@@ -50,35 +93,36 @@ namespace tinyRPC {
             std::string line;
             if(!NextLine(line)) SAVE_STATE(DecodeRequestLine)
             if(line.empty()) { break; }
-            std::vector<std::string> kv;
-            StringUtil::Split(line, ":", kv);
-            if(kv.size() != 2) {
+            std::string::size_type pos = line.find(':');
+            if(pos == std::string::npos) {
                 rpc_error::error_code ec(rpc_error::error_code::RPC_HTTP_BAD_REQUEST);
                 SetError(std::move(ec));
-                return Done(Codec::DecodeResult::FAILED, message);
+                return Done(Codec::DecodeResult::FATAL, message);
             }
-            StringUtil::Trim(kv[0]);
-            StringUtil::ToLower(kv[0]);
-            StringUtil::Trim(kv[1]);
-            http_request_->headers_[kv[0]] = kv[1];
+            std::string k = line.substr(0, pos);
+            std::string v = line.substr(pos + 1);
+            StringUtil::Trim(k);
+            StringUtil::ToLower(k);
+            StringUtil::Trim(v);
+            http_request_->headers_[k] = v;
         }
         auto it = http_request_->headers_.find("content-type");
         if(it == http_request_->headers_.end()) {
             rpc_error::error_code ec(rpc_error::error_code::RPC_HTTP_BAD_REQUEST);
             SetError(std::move(ec));
-            return Done(Codec::DecodeResult::FAILED, message);
+            return Done(Codec::DecodeResult::FATAL, message);
         }
         if(it->second != "application/json") {
             rpc_error::error_code ec(rpc_error::error_code::RPC_HTTP_UNSUPPORTED_MEDIA_TYPE,
                                      it->second);
             SetError(std::move(ec));
-            return Done(Codec::DecodeResult::FAILED, message);
+            return Done(Codec::DecodeResult::FATAL, message);
         }
         it = http_request_->headers_.find("content-length");
         if(it == http_request_->headers_.end()) {
             rpc_error::error_code ec(rpc_error::error_code::RPC_HTTP_LENGTH_REQUIRED);
             SetError(std::move(ec));
-            return Done(Codec::DecodeResult::FAILED, message);
+            return Done(Codec::DecodeResult::FATAL, message);
         }
         try {
             content_len_ = std::stoi(it->second);
@@ -86,7 +130,7 @@ namespace tinyRPC {
         catch (std::invalid_argument& e) {
             rpc_error::error_code ec(rpc_error::error_code::RPC_HTTP_BAD_REQUEST);
             SetError(std::move(ec));
-            return Done(Codec::DecodeResult::FAILED, message);
+            return Done(Codec::DecodeResult::FATAL, message);
         }
         return DecodeBody(message);
     }
@@ -116,5 +160,14 @@ namespace tinyRPC {
         prev_crlf_searched_ = 0;
         return true;
     }
+
+    std::unordered_map<rpc_error::error_code::error, std::pair<int, std::string>>
+    HttpRpcCodec::http_status_mapping_ = {
+            {rpc_error::error_code::RPC_HTTP_METHOD_NOT_ALLOWED, {405, "Method Not Allowed"}},
+            {rpc_error::error_code::RPC_HTTP_BAD_REQUEST, {400, "Bad Request"}},
+            {rpc_error::error_code::RPC_HTTP_LENGTH_REQUIRED, {411, "Length Required"}},
+            {rpc_error::error_code::RPC_HTTP_UNSUPPORTED_MEDIA_TYPE, {415, "Unsupported Media Type"}},
+            {rpc_error::error_code::RPC_HTTP_VERSION_NOT_SUPPORTED, {505, "HTTP Version Not Supported"}},
+    };
 
 }

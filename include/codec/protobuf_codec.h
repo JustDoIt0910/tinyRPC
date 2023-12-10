@@ -41,6 +41,8 @@ namespace tinyRPC {
 
         std::string Encode(const RpcMessage& message) override;
 
+        std::string GetErrorResponse(const std::string &query_id) override;
+
     private:
         void NewMessage(RpcMessage::MessageType type) {
             if(type == RpcMessage::MessageType::RPC_REQUEST) {

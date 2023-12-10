@@ -6,6 +6,7 @@
 #define TINYRPC_STRING_UTIL_H
 #include <string>
 #include <vector>
+#include <sstream>
 
 namespace tinyRPC {
 
@@ -40,6 +41,13 @@ namespace tinyRPC {
                 c = static_cast<char>(std::toupper(c));
             });
         }
+
+        static void PairToString(std::pair<std::string, std::string> p, std::string& str) {
+            std::stringstream ss;
+            ss << "{\"" << p.first << "\", \"" << p.second << "\"}";
+            str = ss.str();
+        }
+
     };
 
 }

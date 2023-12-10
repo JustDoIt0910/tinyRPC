@@ -8,6 +8,7 @@
 #include <string>
 #include <thread>
 #include <vector>
+#include "gw.h"
 #include "asio.hpp"
 
 namespace google::protobuf { class Service; }
@@ -28,6 +29,8 @@ namespace tinyRPC {
 
         void SetWorkerNum(int num);
 
+        void SetGateway(AbstractHttpApiGateway* gw);
+
         void RegisterService(ServicePtr service);
 
         asio::ip::tcp::acceptor GetAcceptor();
@@ -45,6 +48,7 @@ namespace tinyRPC {
         class Impl;
         std::unique_ptr<Impl> pimpl_;
         std::vector<std::thread> workers_;
+        AbstractHttpApiGateway* gw_{nullptr};
     };
 
 }

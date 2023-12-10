@@ -1,7 +1,7 @@
 syntax = "proto3";
 option cc_generic_services = true;
 
-//import "method_ext.proto";
+import "http_rule.proto";
 
 message AddQuery {
     int32 a = 1;
@@ -12,15 +12,15 @@ message AddResponse {
     int32 result= 1;
 }
 
-service CalculateService {
-    rpc Add(AddQuery) returns (AddResponse);
-}
-
 //service CalculateService {
-//    rpc Add(AddQuery) returns (AddResponse) {
-//        option (tinyRPC.api.http) = {
-//            method: "post"
-//            url: "/v1/im/register_device"
-//        };
-//    }
+//    rpc Add(AddQuery) returns (AddResponse);
 //}
+
+service CalculateService {
+    rpc Add(AddQuery) returns (AddResponse) {
+        option (tinyRPC.api.http) = {
+            method: "post"
+            url: "/v1/im/register_device"
+        };
+    }
+}

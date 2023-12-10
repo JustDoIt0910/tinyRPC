@@ -29,6 +29,8 @@ class Session: public std::enable_shared_from_this<Session>{
 
         void DoWrite();
 
+        void Close();
+
         Server* server_;
         io_context& ioc_;
         std::unique_ptr<Codec> codec_;

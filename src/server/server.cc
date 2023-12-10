@@ -79,10 +79,13 @@ namespace tinyRPC {
     }
 
     void Server::RegisterService(ServicePtr service) {
-        pimpl_->RegisterService(std::move(service));
+        pimpl_->RegisterService(service);
+        if(gw_) { gw_->RegisterService(service); }
     }
 
     void Server::SetWorkerNum(int num) { workers_.resize(num); }
+
+    void Server::SetGateway(AbstractHttpApiGateway *gw) { gw_ = gw; }
 
     void Server::RemoveSession(const std::string &session_id) {
         pimpl_->RemoveSession(session_id);

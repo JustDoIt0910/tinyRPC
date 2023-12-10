@@ -40,7 +40,8 @@ namespace tinyRPC {
             if(!ec) {
                 codec_->Consume(length);
                 RpcRequest request;
-                while(codec_->Next(request) == Codec::DecodeResult::SUCCESS) {
+                Codec::DecodeResult res;
+                while((res = codec_->Next(request)) == Codec::DecodeResult::SUCCESS) {
                     ioc_.post([this, self, req = std::move(request)] () {
                         RpcResponse resp = router_->Route(req);
                         std::string data = codec_->Encode(resp);
@@ -50,20 +51,17 @@ namespace tinyRPC {
                         });
                     });
                 }
+                if(res == Codec::DecodeResult::FATAL) {
+                    std::string error_response = codec_->GetErrorResponse(request.msg_id_);
+                    write_strand_.post([this, self, data = std::move(error_response)] () {
+                        async_write(socket_, buffer(data.data(), data.length()), [](std::error_code, size_t){});
+                    });
+                    Close();
+                    return;
+                }
                 DoRead();
             }
-            else if(ec == error::eof || ec == error::connection_reset) {
-                closing_.store(true);
-                write_strand_.post([this, self] () {
-                    std::error_code e;
-                    e = socket_.shutdown(ip::tcp::socket::shutdown_both, e);
-                    if(e) {
-
-                    }
-                    socket_.close();
-                    server_->RemoveSession(id_);
-                });
-            }
+            else if(ec == error::eof || ec == error::connection_reset) { Close(); }
         }));
     }
 
@@ -84,4 +82,17 @@ namespace tinyRPC {
                         }
                     }));
     }
+
+    void Session::Close() {
+        closing_.store(true);
+        auto self = shared_from_this();
+        write_strand_.post([this, self] () {
+            std::error_code e;
+            e = socket_.shutdown(ip::tcp::socket::shutdown_both, e);
+            if(e) {}
+            socket_.close();
+            server_->RemoveSession(id_);
+        });
+    }
+
 }

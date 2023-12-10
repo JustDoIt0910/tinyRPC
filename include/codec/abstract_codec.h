@@ -17,7 +17,7 @@ namespace tinyRPC {
 
         const static size_t MaxReadBytes = 8192;
 
-        enum class DecodeResult {SUCCESS, DECODING, FAILED};
+        enum class DecodeResult {SUCCESS, DECODING, ERROR, FATAL};
 
         Codec(): read_index_(0), write_index_(0) {}
 
@@ -28,6 +28,8 @@ namespace tinyRPC {
         virtual DecodeResult Next(RpcMessage& message) = 0;
 
         virtual std::string Encode(const RpcMessage& message) = 0;
+
+        virtual std::string GetErrorResponse(const std::string& query_id) = 0;
 
         virtual ~Codec() = default;
 
@@ -75,12 +77,12 @@ namespace tinyRPC {
         std::enable_if_t<std::is_same_v<T, std::string>>
         EncodeToBuffer(std::string& buffer, const T& val) { buffer.append(val); }
 
-        std::unique_ptr<rpc_error::error_code> GetError() { return std::move(decode_error_); }
-
     protected:
         void SetError(rpc_error::error_code ec) {
             decode_error_ = std::make_unique<rpc_error::error_code>(std::move(ec));
         }
+
+        std::unique_ptr<rpc_error::error_code> GetError() { return std::move(decode_error_); }
 
     private:
         const char* Begin() const { return &*buffer_.begin(); }

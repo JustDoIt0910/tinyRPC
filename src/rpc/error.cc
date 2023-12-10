@@ -26,7 +26,7 @@ namespace tinyRPC {
     const char* rpc_error::what() { return message_.c_str(); }
 
     std::vector<std::string> rpc_error::error_code::messages_{
-            "Ok", "Invalid RPC name", "No such service",
+            "Ok", "Invalid RPC method name or url", "No such service",
             "No such method", "Failed to parse RPC data",
             "Exception raised in procedure call", "Failed to serialize data",
             "Failed to parse data", "HTTP method not allowed",

@@ -68,7 +68,7 @@ namespace tinyRPC {
         auto total = Fetch<total_len_t>();
         Discard(sizeof(total_len_t));
         if(total <= fixed_len_) {
-            return Done(Codec::DecodeResult::FAILED, message);
+            return Done(Codec::DecodeResult::FATAL, message);
         }
         data_len_ = total - fixed_len_;
         return DecodeMsgId(message);
@@ -102,7 +102,7 @@ namespace tinyRPC {
         if(Readable() < sizeof(crc_t)) SAVE_STATE(DecodeCrc)
         DecodeResult res = Codec::DecodeResult::SUCCESS;
 //        if(!GetMessage<RpcMessage>()->CheckCRC(Fetch<crc_t>())) {
-//            res = Codec::DecodeResult::FAILED;
+//            res = Codec::DecodeResult::ERROR;
 //        }
         Discard(sizeof(crc_t));
         return Done(res, message);
@@ -157,6 +157,10 @@ namespace tinyRPC {
         state_fn_ = nullptr;
         ResetMessage();
         return res;
+    }
+
+    std::string ProtobufRpcCodec::GetErrorResponse(const std::string &query_id) {
+        return {};
     }
 
 }

@@ -34,6 +34,8 @@ namespace tinyRPC {
 
         std::string Encode(const RpcMessage& message) override;
 
+        std::string GetErrorResponse(const std::string& query_id) override;
+
     private:
         bool NextLine(std::string& line);
         DecodeResult DecodeRequestLine(RpcMessage&);
@@ -41,10 +43,17 @@ namespace tinyRPC {
         DecodeResult DecodeBody(RpcMessage&);
         DecodeResult Done(DecodeResult res, RpcMessage&);
 
+        static std::string MakeErrorResponse(int http_code, const std::string& reason,
+                                      const rpc_error::error_code& internal_error,
+                                      const std::string& query_id);
+
         DecodeResult (HttpRpcCodec::*state_fn_)(RpcMessage&){nullptr};
         uint16_t prev_crlf_searched_{0};
         uint16_t content_len_;
         std::unique_ptr<HttpRequest> http_request_;
+
+        static std::unordered_map<rpc_error::error_code::error, std::pair<int, std::string>>
+        http_status_mapping_;
     };
 
 }

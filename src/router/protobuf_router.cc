@@ -3,6 +3,7 @@
 //
 #include "router/protobuf_router.h"
 #include <google/protobuf/message.h>
+#include "../example/calculate/calculate_service.pb.h"
 
 using namespace google;
 

@@ -5,29 +5,54 @@
 #ifndef TINYRPC_HTTP_ROUTER_H
 #define TINYRPC_HTTP_ROUTER_H
 #include "router/base_router.h"
+#include <unordered_map>
 
 namespace tinyRPC {
 
     class HttpProtobufMapper {
     public:
-        virtual bool Map(const std::string& http_method, const std::string& http_url,
-                         std::string& protobuf_service, std::string& protobuf_method) = 0;
+        bool Map(const std::string& http_method, const std::string& http_url,
+                 std::string& protobuf_service, std::string& protobuf_method) {
+            auto k = std::make_pair(http_method, http_url);
+            auto it = mappings_.find(k);
+            if(it == mappings_.end()) { return false; }
+            protobuf_service = it->second.first;
+            protobuf_method = it->second.second;
+            return true;
+        }
+
+        HttpProtobufMapper() = default;
+
+        HttpProtobufMapper(HttpProtobufMapper&&) = default;
+
+        HttpProtobufMapper& operator=(HttpProtobufMapper&&) = default;
 
         virtual ~HttpProtobufMapper() = default;
+
+    protected:
+        struct HashPair {
+            size_t operator()(const std::pair<std::string, std::string>& p) const {
+                return std::hash<std::string>()(p.first) ^ std::hash<std::string>()(p.second);
+            }
+        };
+
+        std::unordered_map<std::pair<std::string, std::string>,
+                std::pair<std::string, std::string>, HashPair> mappings_;
     };
 
     class HttpRouter: public Router {
-        HttpRouter(std::unique_ptr<HttpProtobufMapper>& mapper): mapper_(std::move(mapper)) {}
+    public:
+        explicit HttpRouter(std::unique_ptr<HttpProtobufMapper>& mapper): mapper_(std::move(mapper)) {}
 
-        virtual bool ParseServiceMethod(const std::string& full_name,
+        bool ParseServiceMethod(const std::string& full_name,
                                         std::string& service,
-                                        std::string& method) const;
+                                        std::string& method) const override;
 
-        virtual bool ParseRequestData(google::protobuf::Message* message,
-                                      const std::string& data) const;
+        bool ParseRequestData(google::protobuf::Message* message,
+                                      const std::string& data) const override;
 
-        virtual bool SerializeResponseData(const google::protobuf::Message* message,
-                                           std::string* data) const;
+        bool SerializeResponseData(const google::protobuf::Message* message,
+                                           std::string* data) const override;
 
     private:
         std::unique_ptr<HttpProtobufMapper> mapper_;

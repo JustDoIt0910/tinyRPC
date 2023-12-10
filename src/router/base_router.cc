@@ -50,7 +50,7 @@ namespace tinyRPC {
         }
         std::unique_ptr<protobuf::Message> request_message(service->GetRequestPrototype(method).New());
         std::unique_ptr<protobuf::Message> response_message(service->GetResponsePrototype(method).New());
-        if(!ParseRequestData(response_message.get(), request.data_)) {
+        if(!ParseRequestData(request_message.get(), request.data_)) {
             response.ec_ = rpc_error::error_code::RPC_BAD_DATA;
             return response;
         }
