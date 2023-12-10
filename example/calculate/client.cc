@@ -3,12 +3,9 @@
 //
 #include "client/channel.h"
 #include "rpc/controller.h"
-#include "rpc/closure.h"
 #include "calculate_service.pb.h"
 #include "asio/io_context.hpp"
-#include <vector>
-#include <thread>
-#include <atomic>
+
 
 int main() {
 

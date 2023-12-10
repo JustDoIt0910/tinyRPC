@@ -1,0 +1,45 @@
+syntax = "proto3";
+option cc_generic_services = true;
+
+import "http_rule.proto";
+
+message HelloRequest {
+    string name = 1;
+}
+
+message HelloReply {
+    string message = 1;
+}
+
+message GetUserRequest {
+    string uid = 1;
+}
+
+enum Gender {
+    GENDER_MALE = 0;
+    GENDER_FEMALE = 1;
+};
+
+message GetUserReply {
+    string username = 1;
+    Gender gender = 2;
+    string birth = 3;
+}
+
+service Greeter {
+    rpc SayHello (HelloRequest) returns (HelloReply) {
+        option (tinyRPC.api.http) = {
+            method: "post",
+            url: "/greet_service/greet"
+        };
+    }
+}
+
+service UserService {
+    rpc GetUserById(GetUserRequest) returns (GetUserReply) {
+        option (tinyRPC.api.http) = {
+            method: "get",
+            url: "/user_service/user"
+        };
+    }
+}
