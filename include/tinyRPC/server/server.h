@@ -8,8 +8,6 @@
 #include <string>
 #include <thread>
 #include <vector>
-#include "gw.h"
-#include "asio.hpp"
 
 namespace google::protobuf { class Service; }
 
@@ -18,6 +16,7 @@ namespace tinyRPC {
     class Session;
     class Codec;
     class Router;
+    class AbstractHttpApiGateway;
 
     using ServicePtr = std::shared_ptr<google::protobuf::Service>;
 
@@ -33,9 +32,7 @@ namespace tinyRPC {
 
         void RegisterService(ServicePtr service);
 
-        asio::ip::tcp::acceptor GetAcceptor();
-
-        void NewSession(asio::ip::tcp::socket& socket, std::unique_ptr<Codec>& codec, Router* router);
+        void AddSession(std::shared_ptr<Session> session);
 
         void Serve();
 

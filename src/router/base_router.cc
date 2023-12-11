@@ -1,9 +1,9 @@
 //
 // Created by just do it on 2023/12/5.
 //
-#include "router/base_router.h"
-#include "rpc/message.h"
-#include "rpc/controller.h"
+#include "tinyRPC/router/base_router.h"
+#include "tinyRPC/rpc/message.h"
+#include "tinyRPC/rpc/controller.h"
 #include <google/protobuf/message.h>
 #include <google/protobuf/descriptor.h>
 

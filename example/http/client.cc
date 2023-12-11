@@ -1,9 +1,9 @@
 //
 // Created by just do it on 2023/12/10.
 //
-#include "services.pb.h"
-#include "client/channel.h"
-#include "rpc/controller.h"
+#include "test_service.pb.h"
+#include "tinyRPC/client/channel.h"
+#include "tinyRPC/rpc/controller.h"
 
 int main() {
     tinyRPC::Channel channel("localhost", 9999);

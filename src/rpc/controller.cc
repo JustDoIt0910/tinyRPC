@@ -1,8 +1,8 @@
 //
 // Created by just do it on 2023/12/4.
 //
-#include "rpc/controller.h"
-#include "comm/uuid.h"
+#include "tinyRPC/rpc/controller.h"
+#include "tinyRPC/comm/uuid.h"
 
 namespace tinyRPC {
 
@@ -33,7 +33,7 @@ namespace tinyRPC {
 
     void Controller::SetFailed(const std::string& reason) {}
 
-    bool Controller::IsCanceled() const {}
+    bool Controller::IsCanceled() const { return false; }
 
     void Controller::NotifyOnCancel(google::protobuf::Closure* callback) {}
 

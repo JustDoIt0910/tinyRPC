@@ -1,8 +1,8 @@
 //
 // Created by just do it on 2023/12/10.
 //
-#include "http_rule.pb.h"
-#include "comm/string_util.h"
+#include "api/http_rule.pb.h"
+#include "tinyRPC/comm/string_util.h"
 
 #include "google/protobuf/compiler/cpp/cpp_generator.h"
 #include "google/protobuf/compiler/code_generator.h"
@@ -17,9 +17,9 @@ using namespace google::protobuf::compiler;
 
 static std::string code = "#ifndef TINYRPC_HTTP_API_GW_H\n"
                           "#define TINYRPC_HTTP_API_GW_H\n"
-                          "#include \"server/server.h\"\n"
-                          "#include \"router/http_router.h\"\n"
-                          "#include \"codec/http_codec.h\"\n"
+                          "#include \"tinyRPC/server/server.h\"\n"
+                          "#include \"tinyRPC/server/gw.h\"\n"
+                          "#include \"tinyRPC/router/http_router.h\"\n"
                           "\n"
                           "namespace tinyRPC {\n"
                           "\n"
@@ -32,36 +32,8 @@ static std::string code = "#ifndef TINYRPC_HTTP_API_GW_H\n"
                           "\n"
                           "    class HttpApiGateway: public AbstractHttpApiGateway {\n"
                           "    public:\n"
-                          "        explicit HttpApiGateway(Server* server, uint16_t port = 8080):\n"
-                          "        server_(server),\n"
-                          "        acceptor_(server->GetAcceptor()) {\n"
-                          "            server->SetGateway(this);\n"
-                          "            asio::ip::tcp::endpoint ep(asio::ip::tcp::v4(), port);\n"
-                          "            acceptor_.open(ep.protocol());\n"
-                          "            acceptor_.set_option(asio::ip::tcp::acceptor::reuse_address(true));\n"
-                          "            acceptor_.bind(ep);\n"
-                          "            acceptor_.listen();\n"
-                          "            std::unique_ptr<HttpProtobufMapper> mapper = std::make_unique<HttpProtobufMapperImpl>();\n"
-                          "            router_ = std::make_unique<HttpRouter>(mapper);\n"
-                          "            StartAccept();\n"
-                          "        }\n"
-                          "\n"
-                          "        void RegisterService(std::shared_ptr<google::protobuf::Service> service) override {\n"
-                          "            router_->RegisterService(service);\n"
-                          "        }\n"
-                          "\n"
-                          "    private:\n"
-                          "        void StartAccept() {\n"
-                          "            acceptor_.async_accept([this] (std::error_code ec, asio::ip::tcp::socket socket) {\n"
-                          "                std::unique_ptr<Codec> codec = std::make_unique<HttpRpcCodec>();\n"
-                          "                server_->NewSession(socket, codec, router_.get());\n"
-                          "                StartAccept();\n"
-                          "            });\n"
-                          "        }\n"
-                          "\n"
-                          "        Server* server_;\n"
-                          "        asio::ip::tcp::acceptor acceptor_;\n"
-                          "        std::unique_ptr<HttpRouter> router_;\n"
+                          "        HttpApiGateway(Server* server, uint16_t port):\n"
+                          "        AbstractHttpApiGateway(HttpProtobufMapper::New<HttpProtobufMapperImpl>(), server, port) {}\n"
                           "    };\n"
                           "\n"
                           "}\n"
@@ -72,7 +44,9 @@ class MyGenerator : public google::protobuf::compiler::cpp::CppGenerator {
     bool Generate(const FileDescriptor* file, const std::string& parameter,
                   GeneratorContext* generator_context,
                   std::string* error) const override {
-        auto stream = generator_context->Open("http_api_gw.h");
+        std::vector<std::string> v;
+        tinyRPC::StringUtil::Split(file->name(), ".", v);
+        auto stream = generator_context->Open(v[0] + ".gw.h");
         Printer printer(stream, ' ');
 
 //        std::vector<std::pair<std::string, std::string>> params;

@@ -1,10 +1,9 @@
 //
 // Created by just do it on 2023/12/4.
 //
-#include "client/channel.h"
-#include "rpc/controller.h"
+#include "tinyRPC/client/channel.h"
+#include "tinyRPC/rpc/controller.h"
 #include "calculate_service.pb.h"
-#include "asio/io_context.hpp"
 
 
 int main() {

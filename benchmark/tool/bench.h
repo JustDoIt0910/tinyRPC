@@ -13,9 +13,9 @@
 #include <unordered_map>
 #include "method_traits.h"
 #include "countdown_latch.h"
-#include "client/channel.h"
-#include "rpc/closure.h"
-#include "rpc/controller.h"
+#include "tinyRPC/client/channel.h"
+#include "tinyRPC/rpc/closure.h"
+#include "tinyRPC/rpc/controller.h"
 #include "asio.hpp"
 
 using namespace asio;

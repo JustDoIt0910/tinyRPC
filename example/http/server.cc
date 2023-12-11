@@ -1,9 +1,6 @@
-//
-// Created by just do it on 2023/12/5.
-//
-#include "server/server.h"
-#include "http_api_gw.h"
-#include "services.pb.h"
+#include <iostream>
+#include "test_service.gw.h"
+#include "test_service.pb.h"
 
 using namespace tinyRPC;
 

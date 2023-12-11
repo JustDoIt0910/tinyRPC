@@ -4,7 +4,7 @@
 
 #ifndef TINYRPC_HTTP_ROUTER_H
 #define TINYRPC_HTTP_ROUTER_H
-#include "router/base_router.h"
+#include "tinyRPC/router/base_router.h"
 #include <unordered_map>
 
 namespace tinyRPC {
@@ -28,6 +28,12 @@ namespace tinyRPC {
         HttpProtobufMapper& operator=(HttpProtobufMapper&&) = default;
 
         virtual ~HttpProtobufMapper() = default;
+
+        template<typename T>
+        static std::unique_ptr<HttpProtobufMapper> New() {
+            std::unique_ptr<HttpProtobufMapper> p = std::make_unique<T>();
+            return std::move(p);
+        }
 
     protected:
         struct HashPair {

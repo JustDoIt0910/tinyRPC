@@ -4,7 +4,7 @@
 
 #ifndef TINYRPC_PROTOBUF_ROUTER_H
 #define TINYRPC_PROTOBUF_ROUTER_H
-#include "base_router.h"
+#include "tinyRPC/router/base_router.h"
 
 namespace tinyRPC {
 

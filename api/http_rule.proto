@@ -1,9 +1,8 @@
 syntax = "proto3";
-
-package tinyRPC.api;
-
 import "google/protobuf/descriptor.proto";
 
+
+package tinyRPC.api;
 
 extend google.protobuf.MethodOptions {
     HttpRule http = 72295728;

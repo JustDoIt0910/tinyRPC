@@ -6,7 +6,7 @@
 #define TINYRPC_CLIENT_H
 #include <memory>
 #include <future>
-#include "rpc/message.h"
+#include "tinyRPC/rpc/message.h"
 
 namespace google::protobuf { class Closure; }
 namespace asio { class io_context; }

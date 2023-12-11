@@ -1,13 +1,12 @@
 //
 // Created by just do it on 2023/11/30.
 //
-#include "server/server.h"
-#include "server/session.h"
-#include "codec/protobuf_codec.h"
-#include "router/protobuf_router.h"
-#include "asio.hpp"
+#include "tinyRPC/server/server.h"
+#include "tinyRPC/server/session.h"
+#include "tinyRPC/server/gw.h"
+#include "tinyRPC/codec/protobuf_codec.h"
+#include "tinyRPC/router/protobuf_router.h"
 #include <unordered_map>
-#include <utility>
 
 using namespace asio;
 
@@ -42,13 +41,13 @@ namespace tinyRPC {
         void StartAccept() {
             acceptor_.async_accept([this] (std::error_code ec, ip::tcp::socket socket) {
                 std::unique_ptr<Codec> codec = std::make_unique<ProtobufRpcCodec>();
-                NewSession(socket, codec, router_.get());
+                session_ptr session = std::make_shared<Session>(server_, ioc_, socket, codec, router_.get());
+                AddSession(session);
                 StartAccept();
             });
         }
 
-        void NewSession(ip::tcp::socket& socket, std::unique_ptr<Codec>& codec, Router* router) {
-            session_ptr session = std::make_shared<Session>(server_, ioc_, socket, codec, router);
+        void AddSession(std::shared_ptr<Session> session) {
             session->Start();
             std::lock_guard lg(sessions_mu_);
             sessions_[session->Id()] = session;
@@ -85,7 +84,10 @@ namespace tinyRPC {
 
     void Server::SetWorkerNum(int num) { workers_.resize(num); }
 
-    void Server::SetGateway(AbstractHttpApiGateway *gw) { gw_ = gw; }
+    void Server::SetGateway(AbstractHttpApiGateway *gw) {
+        gw->Init(pimpl_->GetContext());
+        gw_ = gw;
+    }
 
     void Server::RemoveSession(const std::string &session_id) {
         pimpl_->RemoveSession(session_id);
@@ -103,14 +105,7 @@ namespace tinyRPC {
         }
     }
 
-    ip::tcp::acceptor Server::GetAcceptor() {
-        ip::tcp::acceptor acceptor(pimpl_->GetContext());
-        return acceptor;
-    };
-
-    void Server::NewSession(ip::tcp::socket& socket, std::unique_ptr<Codec>& codec, Router* router) {
-        pimpl_->NewSession(socket, codec, router);
-    }
+    void Server::AddSession(std::shared_ptr<Session> session) { pimpl_->AddSession(session); }
 
     Server::~Server() = default;
 

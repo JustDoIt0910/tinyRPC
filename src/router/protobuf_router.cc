@@ -1,9 +1,8 @@
 //
 // Created by just do it on 2023/12/2.
 //
-#include "router/protobuf_router.h"
+#include "tinyRPC/router/protobuf_router.h"
 #include <google/protobuf/message.h>
-#include "../example/calculate/calculate_service.pb.h"
 
 using namespace google;
 

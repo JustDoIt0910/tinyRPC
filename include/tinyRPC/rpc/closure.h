@@ -6,7 +6,7 @@
 #define TINYRPC_CLOSURE_H
 #include <google/protobuf/stubs/callback.h>
 #include <google/protobuf/message.h>
-#include "rpc/error.h"
+#include "tinyRPC/rpc/error.h"
 #include <functional>
 #include <utility>
 

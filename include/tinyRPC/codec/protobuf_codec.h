@@ -4,7 +4,7 @@
 
 #ifndef TINYRPC_PROTOBUF_CODEC_H
 #define TINYRPC_PROTOBUF_CODEC_H
-#include "abstract_codec.h"
+#include "tinyRPC/codec/abstract_codec.h"
 
 #define SAVE_STATE(state) { state_fn_ = &ProtobufRpcCodec::state; \
                             return DecodeResult::DECODING; }

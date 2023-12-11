@@ -6,7 +6,7 @@
 #define TINYRPC_CHANNEL_H
 #include <string>
 #include <google/protobuf/service.h>
-#include "client.h"
+#include "tinyRPC/client/client.h"
 
 namespace asio { class io_context; }
 

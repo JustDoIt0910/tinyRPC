@@ -6,8 +6,7 @@
 #define TINYRPC_MESSAGE_H
 #include <string>
 #include <cstring>
-#include "error.h"
-#include "CRC.h"
+#include "tinyRPC/rpc/error.h"
 
 namespace tinyRPC {
 
@@ -31,12 +30,9 @@ namespace tinyRPC {
         RpcMessage(MessageType type, std::string msg_id, std::string data)
                 :type_(type), msg_id_(std::move(msg_id)), data_(std::move(data)) {}
 
-        virtual uint32_t CRC() const {
-            uint32_t crc = CRC::Calculate(msg_id_.data(), msg_id_.length(), CRC::CRC_32());
-            return CRC::Calculate(data_.data(), data_.length(), CRC::CRC_32(), crc);
-        }
+        virtual uint32_t CRC() const;
 
-        bool CheckCRC(uint32_t crc) const { return CRC() == crc; }
+        bool CheckCRC(uint32_t crc) const;
 
         virtual ~RpcMessage() noexcept = default;
     };
@@ -50,10 +46,7 @@ namespace tinyRPC {
                 :RpcMessage(MessageType::RPC_REQUEST, std::move(msg_id), std::move(data)),
                  full_method_name_(std::move(method_name)) {}
 
-        uint32_t CRC() const override {
-            uint32_t crc = RpcMessage::CRC();
-            return CRC::Calculate(full_method_name_.data(), full_method_name_.length(), CRC::CRC_32(), crc);
-        }
+        uint32_t CRC() const override;
     };
 
     struct RpcResponse: public RpcMessage {
@@ -66,11 +59,7 @@ namespace tinyRPC {
                 :RpcMessage(MessageType::RPC_RESPONSE, std::move(msg_id), std::move(data)),
                  ec_(ec), error_detail_(std::move(error_detail)) {}
 
-        uint32_t CRC() const override {
-            uint32_t crc = RpcMessage::CRC();
-            return CRC::Calculate(error_detail_.data(), error_detail_.length(),
-                                  CRC::CRC_32(), crc);
-        }
+        uint32_t CRC() const override;
     };
 
 }

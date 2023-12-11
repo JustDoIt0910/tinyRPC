@@ -1,9 +1,9 @@
 //
 // Created by just do it on 2023/12/4.
 //
-#include "client/channel.h"
-#include "rpc/message.h"
-#include "rpc/controller.h"
+#include "tinyRPC/client/channel.h"
+#include "tinyRPC/rpc/message.h"
+#include "tinyRPC/rpc/controller.h"
 #include <google/protobuf/descriptor.h>
 #include <google/protobuf/message.h>
 

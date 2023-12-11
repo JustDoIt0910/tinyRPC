@@ -4,11 +4,12 @@
 
 #ifndef TINYRPC_ABSTRACT_CODEC_H
 #define TINYRPC_ABSTRACT_CODEC_H
-#include "comm/endian.h"
-#include "rpc/message.h"
-#include "asio.hpp"
+#include "tinyRPC/comm/endian.h"
+#include "tinyRPC/rpc/message.h"
+#include <memory>
+#include <algorithm>
 
-using namespace asio;
+namespace asio { class mutable_buffers_1; }
 
 namespace tinyRPC {
 
@@ -21,7 +22,7 @@ namespace tinyRPC {
 
         Codec(): read_index_(0), write_index_(0) {}
 
-        mutable_buffers_1 Buffer() { return buffer(tmp_, MaxReadBytes); }
+        asio::mutable_buffers_1 Buffer();
 
         void Consume(size_t length);
 

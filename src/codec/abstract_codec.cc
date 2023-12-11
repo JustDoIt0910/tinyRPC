@@ -1,9 +1,13 @@
 //
 // Created by just do it on 2023/12/5.
 //
-#include "codec/abstract_codec.h"
+#include "tinyRPC/codec/abstract_codec.h"
+#include "asio.hpp"
 
 namespace tinyRPC {
+
+    asio::mutable_buffers_1 Codec::Buffer() { return asio::buffer(tmp_, MaxReadBytes); }
+
     void Codec::Consume(size_t length) {
         size_t writable = Writable();
         if(writable >= length) {
