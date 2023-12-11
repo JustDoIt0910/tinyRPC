@@ -3,7 +3,10 @@
 
 ### 依赖
 
-tinyRPC 依赖 protobuf 进行序列化，使用版本为 3.19.4
+- tinyRPC 依赖 protobuf 进行序列化，使用版本为 3.19.4
+- libuuid
+  ```shell
+  sudo apt-get install uuid-dev
 
 ### 编译
 
