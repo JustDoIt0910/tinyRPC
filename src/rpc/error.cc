@@ -31,7 +31,8 @@ namespace tinyRPC {
             "Exception raised in procedure call", "Failed to serialize data",
             "Failed to parse data", "HTTP method not allowed",
             "Bad HTTP request", "Content-Length is required",
-            "Unsupported media type", "Unsupported HTTP version"
+            "Unsupported media type", "Unsupported HTTP version",
+            "Request rejected by thread pool"
     };
 
 

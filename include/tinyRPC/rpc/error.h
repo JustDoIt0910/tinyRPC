@@ -28,7 +28,8 @@ namespace tinyRPC {
                 RPC_HTTP_BAD_REQUEST,
                 RPC_HTTP_LENGTH_REQUIRED,
                 RPC_HTTP_UNSUPPORTED_MEDIA_TYPE,
-                RPC_HTTP_VERSION_NOT_SUPPORTED
+                RPC_HTTP_VERSION_NOT_SUPPORTED,
+                RPC_THREAD_POOL_REJECTED
             };
 
             explicit error_code(error err = RPC_SUCCESS, std::string detail = "");
