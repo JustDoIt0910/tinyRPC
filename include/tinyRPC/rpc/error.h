@@ -28,7 +28,9 @@ namespace tinyRPC {
                 RPC_HTTP_BAD_REQUEST,
                 RPC_HTTP_LENGTH_REQUIRED,
                 RPC_HTTP_UNSUPPORTED_MEDIA_TYPE,
-                RPC_HTTP_VERSION_NOT_SUPPORTED
+                RPC_HTTP_VERSION_NOT_SUPPORTED,
+                RPC_THREAD_POOL_REJECTED,
+                RPC_IN_PROGRESS
             };
 
             explicit error_code(error err = RPC_SUCCESS, std::string detail = "");
@@ -47,9 +49,12 @@ namespace tinyRPC {
 
         explicit rpc_error(const error_code& ec);
 
+        error_code& error();
+
         const char* what();
 
     private:
+        error_code ec_;
         std::string message_{"tinyRPC::rpc_error: "};
     };
 
@@ -80,6 +85,7 @@ namespace tinyRPC {
     private:
         std::string static detail(const std::string& server_addr, uint16_t port);
     };
+
 }
 
 #endif //TINYRPC_ERROR_H

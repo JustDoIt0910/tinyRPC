@@ -14,7 +14,7 @@ namespace tinyRPC {
 
     class Server::Impl {
     public:
-        explicit Impl(const ip::tcp::endpoint& ep, Server* server):
+        Impl(const ip::tcp::endpoint& ep, Server* server):
         acceptor_(ioc_),
         server_(server) {
             router_ = std::make_unique<ProtobufRpcRouter>();
@@ -47,13 +47,25 @@ namespace tinyRPC {
             });
         }
 
+        void SetThreadNum(int num) { workers_.resize(num); }
+
+        void Run() {
+            if(workers_.empty()) { ioc_.run(); }
+            else {
+                for(auto& worker : workers_) {
+                    worker = std::thread([this] () { ioc_.run(); });
+                }
+                for(auto& worker : workers_) { worker.join(); }
+            }
+        }
+
         void AddSession(std::shared_ptr<Session> session) {
             session->Start();
             std::lock_guard lg(sessions_mu_);
             sessions_[session->Id()] = session;
         }
 
-        io_context& GetContext() { return ioc_; };
+        io_context& GetMainContext() { return ioc_; };
 
     private:
         using session_ptr = std::shared_ptr<Session>;
@@ -64,6 +76,7 @@ namespace tinyRPC {
         std::unique_ptr<Router> router_;
         std::mutex sessions_mu_;
         std::unordered_map<std::string, session_ptr> sessions_;
+        std::vector<std::thread> workers_;
     };
 
     Server::Server(const std::string &address, uint16_t port) {
@@ -82,10 +95,10 @@ namespace tinyRPC {
         if(gw_) { gw_->RegisterService(service); }
     }
 
-    void Server::SetWorkerNum(int num) { workers_.resize(num); }
+    void Server::SetWorkerNum(int num) { pimpl_->SetThreadNum(num); }
 
     void Server::SetGateway(AbstractHttpApiGateway *gw) {
-        gw->Init(pimpl_->GetContext());
+        gw->Init(pimpl_->GetMainContext());
         gw_ = gw;
     }
 
@@ -95,14 +108,7 @@ namespace tinyRPC {
 
     void Server::Serve() {
         pimpl_->StartAccept();
-        io_context& ctx = pimpl_->GetContext();
-        if(workers_.empty()) { ctx.run(); }
-        else {
-            for(auto& worker : workers_) {
-                worker = std::thread([&ctx] () { ctx.run(); });
-            }
-            for(auto& worker : workers_) { worker.join(); }
-        }
+        pimpl_->Run();
     }
 
     void Server::AddSession(std::shared_ptr<Session> session) { pimpl_->AddSession(session); }

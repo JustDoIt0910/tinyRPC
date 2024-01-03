@@ -3,10 +3,7 @@
 
 ### 依赖
 
-- tinyRPC 依赖 protobuf 进行序列化，使用版本为 3.19.4
-- libuuid
-  ```shell
-  sudo apt-get install uuid-dev
+tinyRPC 依赖 protobuf 进行序列化，使用版本为 3.19.4
 
 ### 编译
 
@@ -97,7 +94,6 @@ int main() {
 ```
 
 tinyRPC还支持 http gateway 来提供 http 接口，只需在 proto 文件的 method 中定义映射成的 http 接口方法和 url:
-
 example/http/test_service.proto:
 ```protobuf
 syntax = "proto3";
@@ -151,7 +147,6 @@ service UserService {
 protoc --http-gw_out=. test_service.proto
 ```
 就可以使用 HttpApiGateway 同时提供 rpc 和 http 服务了:
-
 example/http/server.cc:
 ```c++
 #include <iostream>
