@@ -55,7 +55,8 @@ set(LIBS ${PROJECT_NAME} ${Protobuf_LIBRARY} pthread uuid)
 install(TARGETS ${PROJECT_NAME} DESTINATION lib)
 install(DIRECTORY include/ DESTINATION include)
 
-install(DIRECTORY tinyRPC/api DESTINATION include/${PROJECT_NAME}
+install(DIRECTORY ${CMAKE_SOURCE_DIR}/tinyRPC/api
+        DESTINATION include/${PROJECT_NAME}
         FILES_MATCHING
         PATTERN "*.proto"
         PATTERN "*.h"

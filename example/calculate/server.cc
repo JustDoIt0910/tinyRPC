@@ -13,7 +13,6 @@ public:
              ::AddResponse* response,
              ::google::protobuf::Closure* done) override {
         response->set_result(request->a() + request->b());
-        std::this_thread::sleep_for(10s);
         if(done) { done->Run(); }
     }
 };

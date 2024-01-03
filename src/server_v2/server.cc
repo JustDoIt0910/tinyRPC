@@ -56,7 +56,7 @@ namespace tinyRPC {
                 acceptor_(ioc_),
                 server_(server) {
             router_ = std::make_unique<ProtobufRpcRouter>();
-            executor_ = std::make_unique<ThreadPoolExecutor>(1, 1, 1, 30000ms,
+            executor_ = std::make_unique<ThreadPoolExecutor>(100, 100, 200, 30000ms,
                                                              ThreadPoolExecutor::RejectPolicy::ABORT);
             acceptor_.open(ep.protocol());
             acceptor_.set_option(ip::tcp::acceptor::reuse_address(true));
