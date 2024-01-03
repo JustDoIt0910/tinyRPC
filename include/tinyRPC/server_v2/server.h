@@ -30,7 +30,7 @@ namespace tinyRPC {
 
         void SetGateway(AbstractHttpApiGateway* gw);
 
-        void RegisterService(ServicePtr service);
+        void RegisterService(ServicePtr service, bool exec_in_pool = false);
 
         void AddSession(std::shared_ptr<Session> session);
 

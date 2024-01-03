@@ -1,20 +1,22 @@
 //
 // Created by just do it on 2024/1/1.
 //
-#include "tinyRPC/server_v2//session.h"
-#include "tinyRPC/server_v2//server.h"
+#include "tinyRPC/server_v2/session.h"
+#include "tinyRPC/server_v2/server.h"
 #include "tinyRPC/codec/protobuf_codec.h"
 #include "tinyRPC/router/base_router.h"
 #include <iostream>
 
 namespace tinyRPC {
 
-    Session::Session(Server* server, io_context& ioc, std::unique_ptr<Codec>& codec, Router* router):
+    Session::Session(Server* server, io_context& ioc, std::unique_ptr<Codec>& codec,
+                     Router* router, ThreadPoolExecutor* executor):
     server_(server),
     ioc_(ioc),
     socket_(ioc),
     codec_(std::move(codec)),
     router_(router),
+    executor_(executor),
     closing_(false) {}
 
     void Session::Start() {
@@ -39,10 +41,12 @@ namespace tinyRPC {
                 RpcRequest request;
                 Codec::DecodeResult res;
                 while((res = codec_->Next(request)) == Codec::DecodeResult::SUCCESS) {
-                    RpcResponse resp = router_->Route(request);
-                    std::string data = codec_->Encode(resp);
-                    write_queue_.push(std::move(data));
-                    if(write_queue_.size() == 1) { DoWrite(); }
+                    RpcResponse resp = router_->Route(request, self, executor_);
+                    if(resp.ec_ != rpc_error::error_code::RPC_IN_PROGRESS) {
+                        std::string data = codec_->Encode(resp);
+                        write_queue_.push(std::move(data));
+                        if(write_queue_.size() == 1) { DoWrite(); }
+                    }
                 }
                 if(res == Codec::DecodeResult::FATAL) {
                     std::string error_response = codec_->GetErrorResponse(request.msg_id_);
@@ -54,6 +58,16 @@ namespace tinyRPC {
                 DoRead();
             }
             else if(ec == error::eof || ec == error::connection_reset) { Close(); }
+        });
+    }
+
+    void Session::RpcCallback(std::shared_ptr<RpcResponse> response) {
+        auto self = shared_from_this();
+        ioc_.post([this, self, response](){
+            if(closing_.load()) { return; }
+            std::string data = codec_->Encode(*response);
+            write_queue_.push(std::move(data));
+            if(write_queue_.size() == 1) { DoWrite(); }
         });
     }
 

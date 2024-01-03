@@ -19,9 +19,11 @@ namespace tinyRPC {
 
     const char* rpc_error::error_code::message() const { return detail_.c_str(); }
 
-    rpc_error::rpc_error(const error_code& ec): std::runtime_error(ec.message()) {
+    rpc_error::rpc_error(const error_code& ec): std::runtime_error(ec.message()), ec_(ec) {
         message_.append(std::runtime_error::what());
     }
+
+    rpc_error::error_code& rpc_error::error() { return ec_; }
 
     const char* rpc_error::what() { return message_.c_str(); }
 
@@ -32,7 +34,7 @@ namespace tinyRPC {
             "Failed to parse data", "HTTP method not allowed",
             "Bad HTTP request", "Content-Length is required",
             "Unsupported media type", "Unsupported HTTP version",
-            "Request rejected by thread pool"
+            "Request rejected by thread pool", ""
     };
 
 
@@ -45,12 +47,11 @@ namespace tinyRPC {
     timeout_error::timeout_error(const std::string& detail): std::runtime_error(detail) {
         message_.append(std::runtime_error::what());
     }
-    const char* timeout_error::what() const noexcept { return message_.c_str(); }
 
+    const char* timeout_error::what() const noexcept { return message_.c_str(); }
 
     connect_timeout::connect_timeout(const std::string& server_addr, uint16_t port):
     timeout_error(detail(server_addr, port)) {}
-
 
     std::string connect_timeout::detail(const std::string& server_addr, uint16_t port) {
         std::stringstream ss;

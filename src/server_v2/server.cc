@@ -4,9 +4,12 @@
 #include "tinyRPC/server_v2/server.h"
 #include "tinyRPC/server_v2//session.h"
 #include "tinyRPC/server_v2/gw.h"
+#include "tinyRPC/exec/executor.h"
 #include "tinyRPC/codec/protobuf_codec.h"
 #include "tinyRPC/router/protobuf_router.h"
 #include <unordered_map>
+
+using namespace std::chrono_literals;
 
 namespace tinyRPC {
 
@@ -53,13 +56,15 @@ namespace tinyRPC {
                 acceptor_(ioc_),
                 server_(server) {
             router_ = std::make_unique<ProtobufRpcRouter>();
+            executor_ = std::make_unique<ThreadPoolExecutor>(1, 1, 1, 30000ms,
+                                                             ThreadPoolExecutor::RejectPolicy::ABORT);
             acceptor_.open(ep.protocol());
             acceptor_.set_option(ip::tcp::acceptor::reuse_address(true));
             acceptor_.bind(ep);
             acceptor_.listen();
         }
 
-        void RegisterService(ServicePtr service) { router_->RegisterService(service); }
+        void RegisterService(ServicePtr service, bool exec_in_pool) { router_->RegisterService(service, exec_in_pool); }
 
         void RemoveSession(const std::string& session_id) {
             std::shared_ptr<Session> session;
@@ -86,7 +91,7 @@ namespace tinyRPC {
         void StartAccept() {
             io_context& ctx = io_pool_ ? io_pool_->GetContext(): ioc_;
             std::unique_ptr<Codec> codec = std::make_unique<ProtobufRpcCodec>();
-            session_ptr session = std::make_shared<Session>(server_, ctx, codec, router_.get());
+            session_ptr session = std::make_shared<Session>(server_, ctx, codec, router_.get(), executor_.get());
             acceptor_.async_accept(session->Socket(), [this, session] (std::error_code ec) {
                 AddSession(session);
                 StartAccept();
@@ -109,6 +114,7 @@ namespace tinyRPC {
         ip::tcp::acceptor acceptor_;
         Server* server_;
         std::unique_ptr<Router> router_;
+        std::unique_ptr<ThreadPoolExecutor> executor_;
         std::mutex sessions_mu_;
         std::unordered_map<std::string, session_ptr> sessions_;
         std::vector<std::thread> workers_;
@@ -126,9 +132,9 @@ namespace tinyRPC {
         pimpl_ = std::make_unique<Impl>(ep, this);
     }
 
-    void Server::RegisterService(ServicePtr service) {
-        pimpl_->RegisterService(service);
-        if(gw_) { gw_->RegisterService(service); }
+    void Server::RegisterService(ServicePtr service, bool exec_in_pool) {
+        pimpl_->RegisterService(service, exec_in_pool);
+        if(gw_) { gw_->RegisterService(service, exec_in_pool); }
     }
 
     void Server::SetWorkerNum(int num) { pimpl_->SetThreadNum(num); }

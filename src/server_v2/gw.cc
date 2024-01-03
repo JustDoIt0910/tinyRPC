@@ -53,8 +53,8 @@ namespace tinyRPC {
 
     void AbstractHttpApiGateway::Init(asio::io_context &ctx) { pimpl_->Init(ctx); }
 
-    void AbstractHttpApiGateway::RegisterService(std::shared_ptr<google::protobuf::Service> service) {
-        router_->RegisterService(service);
+    void AbstractHttpApiGateway::RegisterService(std::shared_ptr<google::protobuf::Service> service, bool exec_in_pool) {
+        router_->RegisterService(service, exec_in_pool);
     }
 
     AbstractHttpApiGateway::~AbstractHttpApiGateway() = default;

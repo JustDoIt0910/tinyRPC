@@ -22,13 +22,14 @@ add_custom_command(OUTPUT
         COMMENT "compile http_rule.proto")
 
 add_library(${PROJECT_NAME}
-        src/server/server.cc
-        src/server/session.cc
-        src/server/gw.cc
-#        src/server_v2/server.cc
-#        src/server_v2/session.cc
-#        src/server_v2/gw.cc
-
+#        src/server/server.cc
+#        src/server/session.cc
+#        src/server/gw.cc
+        src/server_v2/server.cc
+        src/server_v2/session.cc
+        src/server_v2/gw.cc
+        src/exec/task_queue.cc
+        src/exec/executor.cc
         src/router/base_router.cc
         src/router/protobuf_router.cc
         src/router/http_router.cc
