@@ -20,7 +20,7 @@ namespace tinyRPC {
 
         enum class DecodeResult {SUCCESS, DECODING, ERROR, FATAL};
 
-        Codec(): read_index_(0), write_index_(0) {}
+        Codec();
 
         asio::mutable_buffers_1 Buffer();
 
@@ -35,17 +35,11 @@ namespace tinyRPC {
         virtual ~Codec() = default;
 
     protected:
-        size_t Readable() const { return write_index_ - read_index_; }
+        size_t Readable() const;
 
-        size_t Writable() const { return buffer_.size() - write_index_; }
+        size_t Writable() const;
 
-        void Discard(size_t length) {
-            size_t len = std::min(length, Readable());
-            read_index_ += len;
-            if(read_index_ == write_index_) {
-                read_index_ = write_index_ = 0;
-            }
-        }
+        void Discard(size_t length);
 
         template<typename T=const char*>
         T Fetch() const {
@@ -53,15 +47,7 @@ namespace tinyRPC {
             return NetworkToHost(val);
         }
 
-        const char* FindCRLF(const char* start, uint16_t* prev_searched) {
-            const char* end = Begin() + write_index_;
-            const char* pos = std::search(start, end, CRLF_, CRLF_ + 2);
-            if(pos == end) {
-                *prev_searched = (end - start) + *prev_searched;
-                return nullptr;
-            }
-            return pos;
-        }
+        const char* FindCRLF(const char* start, uint16_t* prev_searched);
 
         template<typename T>
         std::enable_if_t<(!std::is_same_v<T, std::string>) && (sizeof(T) > 1)>
@@ -86,7 +72,7 @@ namespace tinyRPC {
         std::unique_ptr<rpc_error::error_code> GetError() { return std::move(decode_error_); }
 
     private:
-        const char* Begin() const { return &*buffer_.begin(); }
+        const char* Begin() const;
 
         char tmp_[MaxReadBytes] = {0};
         std::vector<char> buffer_;
