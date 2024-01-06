@@ -41,6 +41,8 @@ namespace tinyRPC {
         uint64_t RaftTerm() const;
         uint64_t Revision() const;
 
+        std::vector<KV>& Results();
+
     private:
         uint64_t cluster_id_;
         uint64_t member_id_;
@@ -52,6 +54,9 @@ namespace tinyRPC {
         std::optional<struct Error> error_;
     };
 
+    std::string Base64Encode(const std::string& data);
+
+    std::string Base64Decode(const std::string& data);
 }
 
 #endif //TINYRPC_ETCD_DEF_H

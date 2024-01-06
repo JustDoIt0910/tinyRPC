@@ -3,8 +3,37 @@
 //
 #include "tinyRPC/registry/etcd_def.h"
 #include "nlohmann/json.hpp"
+#include "b64.h"
 
 namespace tinyRPC {
+
+    std::string Base64Encode(const std::string& data) {
+        char* encoded = b64_encode(reinterpret_cast<const unsigned char *>(data.data()), data.length());
+        std::string res = std::string(reinterpret_cast<char*>(encoded));
+        free((void*) encoded);
+        return res;
+    }
+
+    std::string Base64Decode(const std::string& data) {
+        unsigned char* decoded = b64_decode(data.data(), data.length());
+        std::string res = std::string(reinterpret_cast<char*>(decoded));
+        free((void*) decoded);
+        return res;
+    }
+
+    static void BindKV(const nlohmann::json& kv, KV& res) {
+        std::string key = kv["key"];
+        res.key_ = Base64Decode(kv["key"]);
+        if(kv.contains("value")) {
+            res.value_ = Base64Decode(kv["value"]);
+        }
+        if(kv.contains("lease")) {
+            res.lease_ = std::stoull(kv["lease"].template get<std::string>());
+        }
+        res.create_revision_ = std::stoull(kv["create_revision"].template get<std::string>());
+        res.mod_revision_ = std::stoull(kv["mod_revision"].template get<std::string>());
+        res.version_ = std::stoull(kv["version"].template get<std::string>());
+    }
 
     EtcdResponse::EtcdResponse(const std::string& body) {
         nlohmann::json resp = nlohmann::json::parse(body);
@@ -15,7 +44,12 @@ namespace tinyRPC {
             raft_term_ = std::stoull(header["raft_term"].template get<std::string>());
             revision_ = std::stoull(header["revision"].template get<std::string>());
             if(resp.contains("kvs")) {
-
+                nlohmann::json kvs = resp["kvs"];
+                for(const auto & i : kvs) {
+                    KV kv{};
+                    BindKV(i, kv);
+                    kvs_.push_back(std::move(kv));
+                }
             }
         }
         else if(resp.contains("error")) {
@@ -42,5 +76,7 @@ namespace tinyRPC {
     uint64_t EtcdResponse::RaftTerm() const { return raft_term_; }
 
     uint64_t EtcdResponse::Revision() const { return revision_; }
+
+    std::vector<KV> &EtcdResponse::Results() { return kvs_; }
 
 }

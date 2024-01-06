@@ -13,7 +13,12 @@ int main() {
         resp = c.Get("foo")
                 .Sort(EtcdClient::Target::KEY, EtcdClient::SortOrder::ASCEND)
                 .All();
-
+        if(resp->Ok()) {
+            for(KV& kv: resp->Results()) {
+                std::cout << kv.key_ << " " << kv.value_;
+            }
+            std::cout << std::endl;
+        }
     }
     else {
         std::cout << resp->Error() << std::endl;

@@ -7,7 +7,6 @@
 #include "tinyRPC/comm/string_util.h"
 #include "cpp-httplib/httplib.h"
 #include "nlohmann/json.hpp"
-#include "b64.c/b64.h"
 
 namespace tinyRPC {
 
@@ -63,13 +62,9 @@ namespace tinyRPC {
     std::shared_ptr<EtcdResponse>
     EtcdClient::Put(const std::string &key, const std::string &value, uint64_t lease, bool prev_kv,
                     bool ignore_lease, bool ignore_value) {
-        const char* encoded_key = b64_encode(reinterpret_cast<const unsigned char*>(key.data()), key.length());
-        const char* encoded_value = b64_encode(reinterpret_cast<const unsigned char*>(value.data()), value.length());
         nlohmann::json content;
-        content["key"] = std::string(encoded_key);
-        content["value"] = std::string(encoded_value);
-        free((void*) encoded_key);
-        free((void*) encoded_value);
+        content["key"] = Base64Encode(key);
+        content["value"] = Base64Encode(value);
         content["lease"] = lease;
         content["prev_kv"] = prev_kv;
         content["ignore_lease"] = ignore_lease;
@@ -87,20 +82,14 @@ namespace tinyRPC {
     }
 
     EtcdClient::GetRequest& EtcdClient::Get(const std::string &key) {
-        const char* encoded_key = b64_encode(reinterpret_cast<const unsigned char*>(key.data()), key.length());
-        get_request_ = std::make_unique<GetRequest>(this, std::string(encoded_key));
-        free((void*) encoded_key);
+        get_request_ = std::make_unique<GetRequest>(this, Base64Encode(key));
         return *get_request_;
     }
 
     EtcdClient::GetRequest& EtcdClient::GetPrefix(const std::string &prefix) {
         std::string range_end = prefix;
         range_end.at(range_end.length() - 1) += 1;
-        const char* encoded_key = b64_encode(reinterpret_cast<const unsigned char*>(prefix.data()), prefix.length());
-        const char* encoded_end = b64_encode(reinterpret_cast<const unsigned char*>(range_end.data()), range_end.length());
-        get_request_ = std::make_unique<GetRequest>(this, std::string(encoded_key), std::string(encoded_end));
-        free((void*) encoded_key);
-        free((void*) encoded_end);
+        get_request_ = std::make_unique<GetRequest>(this, Base64Encode(prefix), Base64Encode(range_end));
         return *get_request_;
     }
 
@@ -132,16 +121,26 @@ namespace tinyRPC {
                                        sort_order_(SortOrder::NONE), sort_target_(Target::KEY),
                                        limit_(0) {}
 
-    EtcdClient::GetRequest& EtcdClient::GetRequest::Options(GetOptions options) { options_ = std::move(options); }
+    EtcdClient::GetRequest& EtcdClient::GetRequest::Options(GetOptions options) {
+        options_ = std::move(options);
+        return *this;
+    }
 
     EtcdClient::GetRequest& EtcdClient::GetRequest::Sort(Target target, SortOrder order) {
         sort_target_ = target;
         sort_order_ = order;
+        return *this;
     }
 
-    EtcdClient::GetRequest& EtcdClient::GetRequest::Keys() { keys_only_ = true; }
+    EtcdClient::GetRequest& EtcdClient::GetRequest::Keys() {
+        keys_only_ = true;
+        return *this;
+    }
 
-    EtcdClient::GetRequest& EtcdClient::GetRequest::Count() { count_only_ = true; }
+    EtcdClient::GetRequest& EtcdClient::GetRequest::Count() {
+        count_only_ = true;
+        return *this;
+    }
 
     std::shared_ptr<EtcdResponse> EtcdClient::GetRequest::Limit(int64_t limit) {
         limit_ = limit;
@@ -180,7 +179,7 @@ namespace tinyRPC {
         }
         if(limit_ > 0) { content["limit"] = std::to_string(limit_); }
 
-        client_->SendReq("/v3/kv/range", content.dump());
+        return client_->SendReq("/v3/kv/range", content.dump());
     }
 
     std::string EtcdClient::target_str_[] = {"KEY", "VERSION", "CREATE", "MOD", "VALUE"};
