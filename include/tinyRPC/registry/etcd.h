@@ -97,7 +97,7 @@ namespace tinyRPC {
 
         using WatchEventHandler = std::function<void(EventList&)>;
 
-        class WatchRequest {
+    class WatchRequest: public std::enable_shared_from_this<WatchRequest> {
         public:
             WatchRequest(EtcdClient* client, uint64_t watch_id, WatchFilter filter,
                          std::string key, std::string range_end = std::string());
@@ -116,7 +116,7 @@ namespace tinyRPC {
             std::string range_end_;
             WatchOptions options_;
             uint64_t start_revision_;
-            std::thread watch_thread_;
+            bool response_received_;
         };
 
         explicit EtcdClient(const std::string& endpoints, LB lb = LB::ROUND_ROBIN);
@@ -136,7 +136,13 @@ namespace tinyRPC {
 
         WatchRequest& WatchPrefix(const std::string& prefix, uint64_t watch_id = 0, WatchFilter filter = WatchFilter::NONE);
 
-        std::shared_ptr<EtcdResponse> CancelWatch(uint64_t watch_id);
+        std::shared_ptr<EtcdResponse> GrantLease(int64_t ttl, int64_t id = 0);
+
+        std::shared_ptr<EtcdResponse> RevokeLease(int64_t id);
+
+        std::shared_ptr<EtcdResponse> LeaseTTL(int64_t id, bool keys = true);
+
+        std::shared_ptr<EtcdResponse> Leases();
 
         ~EtcdClient();
 
@@ -144,12 +150,12 @@ namespace tinyRPC {
         size_t GetEndpointIndex();
         std::shared_ptr<EtcdResponse> SendReq(std::string url, std::string body);
 
-        std::vector<std::unique_ptr<httplib::Client>> http_clients_;
+        std::vector<std::string> endpoints_;
         LB lb_strategy_;
         int endpoint_index_;
         std::mt19937 random_engine_;
         std::unique_ptr<GetRequest> get_request_;
-        std::unique_ptr<WatchRequest> watch_request_;
+        std::shared_ptr<WatchRequest> watch_request_;
 
         static std::string target_str_[];
         static std::string sort_order_str_[];

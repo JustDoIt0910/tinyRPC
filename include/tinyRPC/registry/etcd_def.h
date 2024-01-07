@@ -29,6 +29,13 @@ namespace tinyRPC {
     };
     using EventList = std::vector<WatchEvent>;
 
+    struct Lease {
+        int64_t id;
+        int64_t ttl;
+        int64_t granted_ttl;
+        std::vector<std::string> attacked_keys;
+    };
+
     struct Error {
         uint32_t code_;
         std::string error_;
@@ -40,9 +47,13 @@ namespace tinyRPC {
         explicit EtcdResponse(const std::string& body);
 
         bool Ok();
+        bool HasEvent();
         KV& Value();
         std::vector<KV>& Values();
         uint64_t Count() const;
+        EventList& Events();
+        struct Lease& Lease();
+        std::vector<int64_t>& Leases();
 
         uint32_t Code();
         std::string Message();
@@ -63,6 +74,9 @@ namespace tinyRPC {
         std::vector<KV> kvs_;
         uint64_t count_;
         std::optional<struct Error> error_;
+        EventList events_;
+        struct Lease lease_{};
+        std::vector<int64_t> leases_;
     };
 
     std::string Base64Encode(const std::string& data);

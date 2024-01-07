@@ -12,29 +12,25 @@ namespace tinyRPC {
 
     EtcdClient::EtcdClient(const std::string &endpoints, LB lb):
     lb_strategy_(lb), endpoint_index_(0), random_engine_(std::random_device()()) {
-        std::vector<std::string> urls;
-        StringUtil::Split(endpoints, ";", urls);
-        if(endpoints.empty()) {
+        StringUtil::Split(endpoints, ";", endpoints_);
+        if(endpoints_.empty()) {
             throw std::runtime_error("no endpoint available");
-        }
-        for(std::string& url: urls) {
-            http_clients_.emplace_back(new httplib::Client(url));
         }
     }
 
     size_t EtcdClient::GetEndpointIndex() {
-        if(http_clients_.empty()) {
+        if(endpoints_.empty()) {
             throw std::runtime_error("no endpoint available");
         }
         if(lb_strategy_ == LB::PICK_FIRST) { return 0; }
         if(lb_strategy_ == LB::ROUND_ROBIN) {
             int index = endpoint_index_++;
-            if(endpoint_index_ >= http_clients_.size()) {
+            if(endpoint_index_ >= endpoints_.size()) {
                 endpoint_index_ = 0;
             }
             return index;
         }
-        std::uniform_int_distribution<size_t> u(0, http_clients_.size() - 1);
+        std::uniform_int_distribution<size_t> u(0, endpoints_.size() - 1);
         return u(random_engine_);
     }
 
@@ -43,10 +39,11 @@ namespace tinyRPC {
         req.method = "POST";
         req.path = std::move(url);
         req.headers = {{"Content-Type", "application/json"}};
-        req.body = std::move(body);
-
-        auto& c = http_clients_[GetEndpointIndex()];
-        httplib::Result res = c->send(req);
+        if(!body.empty()) {
+            req.body = std::move(body);
+        }
+        httplib::Client c(endpoints_[GetEndpointIndex()]);
+        httplib::Result res = c.send(req);
         if(!res) {
             std::cout << res.error() << std::endl;
             return {};
@@ -63,7 +60,7 @@ namespace tinyRPC {
         nlohmann::json content;
         content["key"] = Base64Encode(key);
         content["value"] = Base64Encode(value);
-        content["lease"] = lease;
+        content["lease"] = std::to_string(lease);
         content["prev_kv"] = prev_kv;
         content["ignore_lease"] = ignore_lease;
         content["ignore_value"] = ignore_value;
@@ -76,7 +73,7 @@ namespace tinyRPC {
     }
 
     std::shared_ptr<EtcdResponse> EtcdClient::Put(const std::string &key, const std::string &value, uint64_t lease) {
-        return Put(key, value, 0, lease, false, false);
+        return Put(key, value, lease, false, false, false);
     }
 
     EtcdClient::GetRequest& EtcdClient::Get(const std::string &key) {
@@ -92,20 +89,40 @@ namespace tinyRPC {
     }
 
     EtcdClient::WatchRequest& EtcdClient::Watch(const std::string &key, uint64_t watch_id, WatchFilter filter) {
-        watch_request_ = std::make_unique<WatchRequest>(this, watch_id, filter, Base64Encode(key));
+        watch_request_ = std::make_shared<WatchRequest>(this, watch_id, filter, Base64Encode(key));
         return *watch_request_;
     }
 
     EtcdClient::WatchRequest& EtcdClient::WatchPrefix(const std::string& prefix, uint64_t watch_id, WatchFilter filter) {
         std::string range_end = prefix;
         range_end.at(range_end.length() - 1) += 1;
-        watch_request_ = std::make_unique<WatchRequest>(this, watch_id, filter,
+        watch_request_ = std::make_shared<WatchRequest>(this, watch_id, filter,
                                                         Base64Encode(prefix), Base64Encode(range_end));
         return *watch_request_;
     }
 
-    std::shared_ptr<EtcdResponse> EtcdClient::CancelWatch(uint64_t watch_id) {
+    std::shared_ptr<EtcdResponse> EtcdClient::GrantLease(int64_t ttl, int64_t id) {
+        nlohmann::json content;
+        content["ID"] = std::to_string(id);
+        content["TTL"] = std::to_string(ttl);
+        return SendReq("/v3/lease/grant", content.dump());
+    }
 
+    std::shared_ptr<EtcdResponse> EtcdClient::RevokeLease(int64_t id) {
+        nlohmann::json content;
+        content["ID"] = std::to_string(id);
+        return SendReq("/v3/lease/revoke", content.dump());
+    }
+
+    std::shared_ptr<EtcdResponse> EtcdClient::LeaseTTL(int64_t id, bool keys) {
+        nlohmann::json content;
+        content["ID"] = std::to_string(id);
+        content["keys"] = keys;
+        return SendReq("/v3/lease/timetolive", content.dump());
+    }
+
+    std::shared_ptr<EtcdResponse> EtcdClient::Leases() {
+        return SendReq("/v3/lease/leases", "");
     }
 
     void EtcdClient::GetOptions::SetMaxCreateRevision(uint64_t revision) {
@@ -193,7 +210,7 @@ namespace tinyRPC {
                                            std::string key, std::string range_end)
     :client_(client), watch_id_(watch_id), filter_(filter),
     key_(std::move(key)), range_end_(std::move(range_end)),
-    start_revision_(0) {}
+    start_revision_(0), response_received_(false) {}
 
     EtcdClient::WatchRequest& EtcdClient::WatchRequest::Options(WatchOptions options) {
         options_ = options;
@@ -223,19 +240,32 @@ namespace tinyRPC {
         req->path = "/v3/watch";
         req->headers = {{"Content-Type", "application/json"}};
         req->body = content.dump();
-        std::future<std::shared_ptr<EtcdResponse>> fu;
-        req->response_handler = [&fu](const httplib::Response& response) {
-
+        auto p = std::make_shared<std::promise<std::shared_ptr<EtcdResponse>>>();
+        auto fu = p->get_future();
+        std::weak_ptr<std::promise<std::shared_ptr<EtcdResponse>>> wp = p;
+        req->content_receiver = [this, wp, &handler](const char *data, size_t data_length, uint64_t offset, uint64_t total_length) {
+            auto response = std::make_shared<EtcdResponse>(std::string(data, data_length));
+            auto p = wp.lock();
+            if(p && !response_received_) {
+                response_received_ = true;
+                p->set_value(response);
+            }
+            if(response->HasEvent()) {
+                handler(response->Events());
+            }
             return true;
         };
-        req->content_receiver = [&](const char *data, size_t data_length, uint64_t offset, uint64_t total_length) {
-
-            return true;
-        };
-        watch_thread_ = std::thread([this, req, &fu](){
-            auto& c = client_->http_clients_[client_->GetEndpointIndex()];
-            c->send(*req);
+        auto self = shared_from_this();
+        std::thread watch_thread = std::thread([this, self, req, wp](){
+            httplib::Client c(client_->endpoints_[client_->GetEndpointIndex()]);
+            c.set_read_timeout(-1);
+            auto res = c.send(*req);
+            if(!res) {
+                auto p = wp.lock();
+                if(p) { p->set_value({}); }
+            }
         });
+        watch_thread.detach();
         return fu.get();
     }
 
