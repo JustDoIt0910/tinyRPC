@@ -10,8 +10,13 @@ namespace tinyRPC {
     ThreadPoolExecutor::ThreadPoolExecutor(int queue_size, int core_pool_size, int max_pool_size,
                                            std::chrono::milliseconds max_idle,
                                            ThreadPoolExecutor::RejectPolicy reject_policy):
-            task_queue_(queue_size), core_pool_size_(core_pool_size), max_pool_size_(max_pool_size),
-            max_idle_(max_idle), reject_policy_(reject_policy), pool_size_(core_pool_size), shutting_down_(false) {
+            task_queue_(queue_size),
+            core_pool_size_(core_pool_size),
+            max_pool_size_(max_pool_size),
+            max_idle_(max_idle),
+            reject_policy_(reject_policy),
+            pool_size_(core_pool_size),
+            shutting_down_(false) {
         for(int i = 0; i < core_pool_size_; i++) {
             auto worker = std::make_shared<std::thread>(&ThreadPoolExecutor::WorkerRoutine, this);
             active_workers_[worker->get_id()] = worker;

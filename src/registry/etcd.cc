@@ -2,7 +2,7 @@
 // Created by just do it on 2024/1/4.
 //
 #include <utility>
-
+#include <future>
 #include "tinyRPC/registry/etcd.h"
 #include "tinyRPC/comm/string_util.h"
 #include "cpp-httplib/httplib.h"
@@ -42,9 +42,7 @@ namespace tinyRPC {
         httplib::Request req;
         req.method = "POST";
         req.path = std::move(url);
-        req.headers = {
-                {"Content-Type", "application/json"}
-        };
+        req.headers = {{"Content-Type", "application/json"}};
         req.body = std::move(body);
 
         auto& c = http_clients_[GetEndpointIndex()];
@@ -93,6 +91,23 @@ namespace tinyRPC {
         return *get_request_;
     }
 
+    EtcdClient::WatchRequest& EtcdClient::Watch(const std::string &key, uint64_t watch_id, WatchFilter filter) {
+        watch_request_ = std::make_unique<WatchRequest>(this, watch_id, filter, Base64Encode(key));
+        return *watch_request_;
+    }
+
+    EtcdClient::WatchRequest& EtcdClient::WatchPrefix(const std::string& prefix, uint64_t watch_id, WatchFilter filter) {
+        std::string range_end = prefix;
+        range_end.at(range_end.length() - 1) += 1;
+        watch_request_ = std::make_unique<WatchRequest>(this, watch_id, filter,
+                                                        Base64Encode(prefix), Base64Encode(range_end));
+        return *watch_request_;
+    }
+
+    std::shared_ptr<EtcdResponse> EtcdClient::CancelWatch(uint64_t watch_id) {
+
+    }
+
     void EtcdClient::GetOptions::SetMaxCreateRevision(uint64_t revision) {
         max_create_revision_ = std::to_string(revision);
     }
@@ -116,10 +131,10 @@ namespace tinyRPC {
     void EtcdClient::GetOptions::SetSerializable(bool enable) { serializable_ = enable; }
 
     EtcdClient::GetRequest::GetRequest(tinyRPC::EtcdClient *client, std::string key, std::string range_end)
-                                       :client_(client), key_(std::move(key)), range_end_(std::move(range_end)),
-                                       count_only_(false), keys_only_(false),
-                                       sort_order_(SortOrder::NONE), sort_target_(Target::KEY),
-                                       limit_(0) {}
+    :client_(client), key_(std::move(key)), range_end_(std::move(range_end)),
+    count_only_(false), keys_only_(false),
+    sort_order_(SortOrder::NONE), sort_target_(Target::KEY),
+    limit_(0) {}
 
     EtcdClient::GetRequest& EtcdClient::GetRequest::Options(GetOptions options) {
         options_ = std::move(options);
@@ -150,27 +165,13 @@ namespace tinyRPC {
     std::shared_ptr<EtcdResponse> EtcdClient::GetRequest::All() {
         nlohmann::json content;
         content["key"] = key_;
-        if(!range_end_.empty()) {
-            content["range_end"] = range_end_;
-        }
-        if(options_.max_create_revision_.has_value()) {
-            content["max_create_revision"] = *options_.max_create_revision_;
-        }
-        if(options_.min_create_revision_.has_value()) {
-            content["min_create_revision"] = *options_.min_create_revision_;
-        }
-        if(options_.max_mod_revision_.has_value()) {
-            content["max_mod_revision"] = *options_.max_mod_revision_;
-        }
-        if(options_.min_mod_revision_.has_value()) {
-            content["min_mod_revision"] = *options_.min_mod_revision_;
-        }
-        if(options_.revision_.has_value()) {
-            content["revision"] = *options_.revision_;
-        }
-        if(options_.serializable_.has_value() && *options_.serializable_) {
-            content["serializable"] = true;
-        }
+        if(!range_end_.empty()) { content["range_end"] = range_end_; }
+        if(options_.max_create_revision_.has_value()) { content["max_create_revision"] = *options_.max_create_revision_; }
+        if(options_.min_create_revision_.has_value()) { content["min_create_revision"] = *options_.min_create_revision_; }
+        if(options_.max_mod_revision_.has_value()) { content["max_mod_revision"] = *options_.max_mod_revision_; }
+        if(options_.min_mod_revision_.has_value()) { content["min_mod_revision"] = *options_.min_mod_revision_; }
+        if(options_.revision_.has_value()) { content["revision"] = *options_.revision_; }
+        if(options_.serializable_.has_value() && *options_.serializable_) { content["serializable"] = true; }
         if(keys_only_) { content["keys_only"] = true; }
         if(count_only_) { content["count_only"] = true; }
         if(sort_order_ != SortOrder::NONE) {
@@ -182,9 +183,67 @@ namespace tinyRPC {
         return client_->SendReq("/v3/kv/range", content.dump());
     }
 
+    void EtcdClient::WatchOptions::SetFragment(bool enable) { fragment_ = enable; }
+
+    void EtcdClient::WatchOptions::SetPrevKV(bool enable) { prev_kv_ = enable; }
+
+    void EtcdClient::WatchOptions::SetProgressNotify(bool enable) { progress_notify_ = enable; }
+
+    EtcdClient::WatchRequest::WatchRequest(EtcdClient* client, uint64_t watch_id, WatchFilter filter,
+                                           std::string key, std::string range_end)
+    :client_(client), watch_id_(watch_id), filter_(filter),
+    key_(std::move(key)), range_end_(std::move(range_end)),
+    start_revision_(0) {}
+
+    EtcdClient::WatchRequest& EtcdClient::WatchRequest::Options(WatchOptions options) {
+        options_ = options;
+        return *this;
+    }
+
+    EtcdClient::WatchRequest& EtcdClient::WatchRequest::From(uint64_t start_revision) {
+        start_revision_ = start_revision;
+        return *this;
+    }
+
+    std::shared_ptr<EtcdResponse> EtcdClient::WatchRequest::HandleEvent(const WatchEventHandler& handler) {
+        nlohmann::json content;
+        nlohmann::json create_req;
+        create_req["key"] = key_;
+        if(!range_end_.empty()) { create_req["range_end"] = range_end_; }
+        if(filter_ != WatchFilter::NONE) { create_req["filter"] = watch_filter_str_[static_cast<int>(filter_)]; }
+        if(start_revision_ > 0) { create_req["start_revision"] = std::to_string(start_revision_); }
+        if(watch_id_ != 0) { create_req["watch_id"] = std::to_string(watch_id_); }
+        if(options_.fragment_.has_value()) { create_req["fragment"] = *options_.fragment_; }
+        if(options_.prev_kv_.has_value()) { create_req["prev_kv"] = *options_.prev_kv_; }
+        if(options_.progress_notify_.has_value()) { create_req["progress_notify"] = *options_.progress_notify_; }
+        content["create_request"] = create_req;
+
+        std::shared_ptr<httplib::Request> req = std::make_shared<httplib::Request>();
+        req->method = "POST";
+        req->path = "/v3/watch";
+        req->headers = {{"Content-Type", "application/json"}};
+        req->body = content.dump();
+        std::future<std::shared_ptr<EtcdResponse>> fu;
+        req->response_handler = [&fu](const httplib::Response& response) {
+
+            return true;
+        };
+        req->content_receiver = [&](const char *data, size_t data_length, uint64_t offset, uint64_t total_length) {
+
+            return true;
+        };
+        watch_thread_ = std::thread([this, req, &fu](){
+            auto& c = client_->http_clients_[client_->GetEndpointIndex()];
+            c->send(*req);
+        });
+        return fu.get();
+    }
+
     std::string EtcdClient::target_str_[] = {"KEY", "VERSION", "CREATE", "MOD", "VALUE"};
 
     std::string EtcdClient::sort_order_str_[] = {"NONE", "ASCEND", "DESCEND"};
+
+    std::string EtcdClient::watch_filter_str_[] = {"NONE", "NOPUT", "NODELETE"};
 
     EtcdClient::~EtcdClient() = default;
 }

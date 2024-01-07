@@ -23,16 +23,16 @@ namespace tinyRPC {
 
     static void BindKV(const nlohmann::json& kv, KV& res) {
         std::string key = kv["key"];
-        res.key_ = Base64Decode(kv["key"]);
+        res.key = Base64Decode(kv["key"]);
         if(kv.contains("value")) {
-            res.value_ = Base64Decode(kv["value"]);
+            res.value = Base64Decode(kv["value"]);
         }
         if(kv.contains("lease")) {
-            res.lease_ = std::stoull(kv["lease"].template get<std::string>());
+            res.lease = std::stoull(kv["lease"].template get<std::string>());
         }
-        res.create_revision_ = std::stoull(kv["create_revision"].template get<std::string>());
-        res.mod_revision_ = std::stoull(kv["mod_revision"].template get<std::string>());
-        res.version_ = std::stoull(kv["version"].template get<std::string>());
+        res.create_revision = std::stoull(kv["create_revision"].template get<std::string>());
+        res.mod_revision = std::stoull(kv["mod_revision"].template get<std::string>());
+        res.version = std::stoull(kv["version"].template get<std::string>());
     }
 
     EtcdResponse::EtcdResponse(const std::string& body) {
@@ -50,6 +50,9 @@ namespace tinyRPC {
                     BindKV(i, kv);
                     kvs_.push_back(std::move(kv));
                 }
+            }
+            if(resp.contains("count")) {
+                count_ = std::stoull(resp["count"].template get<std::string>());
             }
         }
         else if(resp.contains("error")) {
@@ -77,6 +80,10 @@ namespace tinyRPC {
 
     uint64_t EtcdResponse::Revision() const { return revision_; }
 
-    std::vector<KV> &EtcdResponse::Results() { return kvs_; }
+    KV& EtcdResponse::Value() { return kv_; }
+
+    std::vector<KV> &EtcdResponse::Values() { return kvs_; }
+
+    uint64_t EtcdResponse::Count() const { return count_; }
 
 }

@@ -8,16 +8,18 @@ using namespace tinyRPC;
 
 int main() {
     EtcdClient c("http://110.40.210.125:2379");
-    auto resp = c.Put("foo", "bar");
+    auto resp = c.Put("test/", "abc");
+    resp = c.Put("test/1", "def");
+    resp = c.Put("test/1/2", "ghi");
     if(resp->Ok()) {
-        resp = c.Get("foo")
-                .Sort(EtcdClient::Target::KEY, EtcdClient::SortOrder::ASCEND)
+        resp = c.GetPrefix("test/")
+                .Sort(EtcdClient::Target::KEY, EtcdClient::SortOrder::DESCEND)
                 .All();
         if(resp->Ok()) {
-            for(KV& kv: resp->Results()) {
-                std::cout << kv.key_ << " " << kv.value_;
+            for(KV& kv: resp->Values()) {
+                std::cout << kv.key << " " << kv.value;
+                std::cout << std::endl;
             }
-            std::cout << std::endl;
         }
     }
     else {

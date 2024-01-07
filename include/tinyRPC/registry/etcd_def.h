@@ -11,13 +11,23 @@
 namespace tinyRPC {
 
     struct KV {
-        std::string key_;
-        std::string value_;
-        uint64_t create_revision_;
-        uint64_t mod_revision_;
-        uint64_t lease_;
-        uint64_t version_;
+        std::string key;
+        std::string value;
+        uint64_t create_revision;
+        uint64_t mod_revision;
+        uint64_t lease;
+        uint64_t version;
     };
+
+    struct WatchEvent {
+        enum class Type { PUT, DELETE };
+
+        WatchEvent(Type _type, KV _kv): type(_type), kv(std::move(_kv)) {}
+        Type type;
+        KV kv;
+        std::optional<KV> prev_kv;
+    };
+    using EventList = std::vector<WatchEvent>;
 
     struct Error {
         uint32_t code_;
@@ -31,6 +41,8 @@ namespace tinyRPC {
 
         bool Ok();
         KV& Value();
+        std::vector<KV>& Values();
+        uint64_t Count() const;
 
         uint32_t Code();
         std::string Message();
@@ -41,16 +53,15 @@ namespace tinyRPC {
         uint64_t RaftTerm() const;
         uint64_t Revision() const;
 
-        std::vector<KV>& Results();
-
     private:
         uint64_t cluster_id_;
         uint64_t member_id_;
         uint64_t raft_term_;
         uint64_t revision_;
 
-        std::optional<KV> kv_;
+        KV kv_;
         std::vector<KV> kvs_;
+        uint64_t count_;
         std::optional<struct Error> error_;
     };
 
