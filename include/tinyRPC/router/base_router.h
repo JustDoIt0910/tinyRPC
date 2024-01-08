@@ -20,7 +20,7 @@ namespace tinyRPC {
         ServicePtr service_;
         bool exec_in_pool_;
 
-        Service(ServicePtr service, bool exec_in_pool): service_(service),
+        Service(const ServicePtr& service, bool exec_in_pool): service_(service),
         exec_in_pool_(exec_in_pool) {}
 
         Service(): service_(nullptr), exec_in_pool_(false) {}

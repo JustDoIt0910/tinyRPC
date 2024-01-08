@@ -105,7 +105,12 @@ namespace tinyRPC {
         nlohmann::json content;
         content["ID"] = std::to_string(id);
         content["TTL"] = std::to_string(ttl);
-        return SendReq("/v3/lease/grant", content.dump());
+        auto resp = SendReq("/v3/lease/grant", content.dump());
+        if(resp && resp->Ok()) {
+            Lease lease = resp->Lease();
+            granted_leases_[lease.id] = lease;
+        }
+        return resp;
     }
 
     std::shared_ptr<EtcdResponse> EtcdClient::RevokeLease(int64_t id) {
@@ -123,6 +128,29 @@ namespace tinyRPC {
 
     std::shared_ptr<EtcdResponse> EtcdClient::Leases() {
         return SendReq("/v3/lease/leases", "");
+    }
+
+    void EtcdClient::Keepalive(int64_t lease_id) {
+        auto it = granted_leases_.find(lease_id);
+        if(it == granted_leases_.end()) { return; }
+        int64_t keepalive_interval = (*it).second.ttl / 2;
+
+
+        nlohmann::json content;
+        content["ID"] = std::to_string(lease_id);
+        std::shared_ptr<httplib::Client> c = std::make_shared<httplib::Client>(endpoints_[GetEndpointIndex()]);
+        std::shared_ptr<httplib::Request> req = std::make_shared<httplib::Request>();
+        req->method = "POST";
+        req->path = "/v3/lease/keepalive";
+        req->headers = {{"Content-Type", "application/json"}};
+        req->body = content.dump();
+        std::thread keepalive_thread = std::thread([c, req, keepalive_interval]() {
+            while(true) {
+                std::this_thread::sleep_for(std::chrono::seconds(keepalive_interval));
+                c->send(*req);
+            }
+        });
+        keepalive_thread.detach();
     }
 
     void EtcdClient::GetOptions::SetMaxCreateRevision(uint64_t revision) {

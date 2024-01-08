@@ -86,6 +86,16 @@ namespace tinyRPC {
         std::string static detail(const std::string& server_addr, uint16_t port);
     };
 
+    class etcd_error: public std::runtime_error {
+    public:
+        explicit etcd_error(const std::string& detail);
+
+        const char* what() const noexcept override;
+
+    private:
+        std::string message_{"tinyRPC::etcd_error: "};
+    };
+
 }
 
 #endif //TINYRPC_ERROR_H

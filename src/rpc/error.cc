@@ -59,4 +59,10 @@ namespace tinyRPC {
         return ss.str();
     }
 
+    etcd_error::etcd_error(const std::string& detail): std::runtime_error(detail) {
+        message_.append(std::runtime_error::what());
+    }
+
+    const char* etcd_error::what() const noexcept { return message_.c_str(); }
+
 }

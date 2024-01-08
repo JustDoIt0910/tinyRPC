@@ -142,6 +142,8 @@ namespace tinyRPC {
 
         std::shared_ptr<EtcdResponse> LeaseTTL(int64_t id, bool keys = true);
 
+        void Keepalive(int64_t lease_id);
+
         std::shared_ptr<EtcdResponse> Leases();
 
         ~EtcdClient();
@@ -156,6 +158,7 @@ namespace tinyRPC {
         std::mt19937 random_engine_;
         std::unique_ptr<GetRequest> get_request_;
         std::shared_ptr<WatchRequest> watch_request_;
+        std::unordered_map<int64_t, Lease> granted_leases_;
 
         static std::string target_str_[];
         static std::string sort_order_str_[];

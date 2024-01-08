@@ -14,12 +14,10 @@ int main() {
 //    c.Put("foo/1", "bar3");
 //    c.Put("foo/1/2", "bar4");
 
-    auto resp = c.GrantLease(30);
+    auto resp = c.GrantLease(5, 1);
     if(resp->Ok()) {
         int64_t lease_id = resp->Lease().id;
         c.Put("foo", "bar", lease_id);
-
-        std::this_thread::sleep_for(2s);
         resp = c.LeaseTTL(lease_id);
         if(resp->Ok()) {
             Lease& lease = resp->Lease();

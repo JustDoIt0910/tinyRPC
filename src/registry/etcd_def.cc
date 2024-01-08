@@ -25,15 +25,15 @@ namespace tinyRPC {
     static void BindKV(const nlohmann::json& kv, KV& res) {
         std::string key = kv["key"];
         res.key = Base64Decode(kv["key"]);
-        if(kv.contains("value")) {
-            res.value = Base64Decode(kv["value"]);
+        if(kv.contains("value")) { res.value = Base64Decode(kv["value"]); }
+        if(kv.contains("lease")) { res.lease = std::stoull(kv["lease"].template get<std::string>()); }
+        if(kv.contains("create_revision")) {
+            res.create_revision = std::stoull(kv["create_revision"].template get<std::string>());
         }
-        if(kv.contains("lease")) {
-            res.lease = std::stoull(kv["lease"].template get<std::string>());
+        if(kv.contains("mod_revision")) {
+            res.mod_revision = std::stoull(kv["mod_revision"].template get<std::string>());
         }
-        res.create_revision = std::stoull(kv["create_revision"].template get<std::string>());
-        res.mod_revision = std::stoull(kv["mod_revision"].template get<std::string>());
-        res.version = std::stoull(kv["version"].template get<std::string>());
+        if(kv.contains("version")) { res.version = std::stoull(kv["version"].template get<std::string>()); }
     }
 
     EtcdResponse::EtcdResponse(const std::string& body) {
