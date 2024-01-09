@@ -106,7 +106,8 @@ namespace tinyRPC {
             void NewRequest() {
                 QueryType query;
                 bench_->query_initializer_(&query);
-                auto closure = MakeRpcClosure<ResponseType>([this] (rpc_error::error_code ec, google::protobuf::Message* message) {
+                auto closure = MakeRpcClosure<ResponseType>([this] (rpc_error::error_code ec,
+                        google::protobuf::Message* message) {
                     HandleCallFinish(std::move(ec), message);
                 });
                 (stub_.*(bench_->method_))(&controller_, &query, nullptr, closure);

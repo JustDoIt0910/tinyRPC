@@ -24,7 +24,7 @@ namespace tinyRPC {
         Task(TaskFunc t, TaskCallback cb):
         task_(std::move(t)), callback_(std::move(cb)) {};
 
-        void operator()();
+        void operator()() const;
     };
 
     class TaskQueue {

@@ -59,4 +59,17 @@ namespace tinyRPC {
         return ss.str();
     }
 
+    no_endpoint_error::no_endpoint_error(const std::string &service):
+    std::runtime_error("no endpoint for service " + service) {
+        message_.append(std::runtime_error::what());
+    }
+
+    const char* no_endpoint_error::what() const noexcept { return message_.c_str(); }
+
+    etcd_error::etcd_error(const std::string& detail): std::runtime_error(detail) {
+        message_.append(std::runtime_error::what());
+    }
+
+    const char* etcd_error::what() const noexcept { return message_.c_str(); }
+
 }

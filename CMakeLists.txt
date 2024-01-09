@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.16)
 project(tinyRPC)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_BUILD_TYPE "Debug")
+
 find_package(Protobuf REQUIRED)
 if (${PROTOBUF_FOUND})
     message("protobuf found")
@@ -8,11 +11,13 @@ else ()
     message(FATAL_ERROR "Cannot find Protobuf")
 endif ()
 
-set(CMAKE_CXX_STANDARD 17)
-
-set(CMAKE_BUILD_TYPE "Debug")
+set(JSON_BuildTests OFF CACHE INTERNAL "")
+set(JSON_Install OFF CACHE INTERNAL "")
 
 set(THIRD_PARTY_DIR ${CMAKE_SOURCE_DIR}/third_party)
+
+add_subdirectory(${THIRD_PARTY_DIR}/json-3.11.3)
+add_subdirectory(${THIRD_PARTY_DIR}/b64.c)
 
 add_custom_command(OUTPUT
         ${CMAKE_SOURCE_DIR}/tinyRPC/api/http_rule.pb.h
@@ -39,16 +44,22 @@ add_library(${PROJECT_NAME}
         src/rpc/error.cc
         src/rpc/controller.cc
         src/rpc/message.cc
+        src/registry/etcd_def.cc
+        src/registry/etcd.cc
+        src/registry/registry.cc
         src/client/client.cc
         src/client/channel.cc
+        src/client/lb.cc
         ${CMAKE_SOURCE_DIR}/tinyRPC/api/http_rule.pb.cc)
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/include)
 
 target_include_directories(${PROJECT_NAME} PRIVATE
         ${CMAKE_SOURCE_DIR}
-        ${THIRD_PARTY_DIR}/asio
-        ${THIRD_PARTY_DIR})
+        ${THIRD_PARTY_DIR}
+        ${THIRD_PARTY_DIR}/asio)
+
+target_link_libraries(${PROJECT_NAME} PRIVATE nlohmann_json::nlohmann_json b64c)
 
 set(LIBS ${PROJECT_NAME} ${Protobuf_LIBRARY} pthread uuid)
 

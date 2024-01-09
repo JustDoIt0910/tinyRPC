@@ -8,7 +8,9 @@
 
 int main() {
 
-    tinyRPC::Channel channel("localhost", 9999);
+    //tinyRPC::Channel channel("localhost", 9999);
+    tinyRPC::Channel channel("http://110.40.210.125:2379",
+                             std::make_shared<tinyRPC::RoundRobinBalancer>());
     CalculateService_Stub stub(&channel);
     tinyRPC::Controller controller;
 
@@ -17,6 +19,12 @@ int main() {
     query.set_b(20);
     AddResponse resp;
 
+    stub.Add(&controller, &query, &resp, nullptr);
+    std::cout << resp.result() << std::endl;
+    stub.Add(&controller, &query, &resp, nullptr);
+    std::cout << resp.result() << std::endl;
+    stub.Add(&controller, &query, &resp, nullptr);
+    std::cout << resp.result() << std::endl;
     stub.Add(&controller, &query, &resp, nullptr);
     std::cout << resp.result() << std::endl;
 }

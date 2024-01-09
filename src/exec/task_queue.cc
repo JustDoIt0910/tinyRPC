@@ -1,13 +1,13 @@
 //
 // Created by just do it on 2024/1/1.
 //
-#include <assert.h>
+#include <cassert>
 #include "tinyRPC/rpc/message.h"
 #include "tinyRPC/exec/task_queue.h"
 
 namespace tinyRPC {
 
-    void Task::operator()() {
+    void Task::operator()() const {
         std::shared_ptr<RpcResponse> res = task_();
         callback_(res);
     }
@@ -52,7 +52,7 @@ namespace tinyRPC {
             lk.lock();
         }
         else if(!lk.try_lock_for(timeout)) {
-            return std::shared_ptr<Task>();
+            return {};
         }
         if(!get_queue_.empty() || Swap(timeout) > 0) {
             std::shared_ptr<Task> task = get_queue_.front();
@@ -63,7 +63,7 @@ namespace tinyRPC {
         if(!shutting_down_.load()) {
             assert(timeout != std::chrono::milliseconds::zero());
         }
-        return std::shared_ptr<Task>();
+        return {};
     }
 
     std::shared_ptr<Task> TaskQueue::Get() { return GetWithTimeout(std::chrono::milliseconds::zero()); }

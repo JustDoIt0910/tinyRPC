@@ -7,6 +7,8 @@
 #include "tinyRPC/exec/executor.h"
 #include "tinyRPC/codec/protobuf_codec.h"
 #include "tinyRPC/router/protobuf_router.h"
+#include "tinyRPC/registry/registry.h"
+#include "google/protobuf/descriptor.h"
 #include <unordered_map>
 
 using namespace std::chrono_literals;
@@ -53,18 +55,22 @@ namespace tinyRPC {
     class Server::Impl {
     public:
         Impl(const ip::tcp::endpoint& ep, Server* server):
-                acceptor_(ioc_),
-                server_(server) {
+        acceptor_(ioc_),
+        server_(server) {
             router_ = std::make_unique<ProtobufRpcRouter>();
             executor_ = std::make_unique<ThreadPoolExecutor>(100, 100, 200, 30000ms,
                                                              ThreadPoolExecutor::RejectPolicy::ABORT);
+            registry_ = std::make_unique<Registry>("http://110.40.210.125:2379", ep, 10);
             acceptor_.open(ep.protocol());
             acceptor_.set_option(ip::tcp::acceptor::reuse_address(true));
             acceptor_.bind(ep);
             acceptor_.listen();
         }
 
-        void RegisterService(ServicePtr service, bool exec_in_pool) { router_->RegisterService(service, exec_in_pool); }
+        void RegisterService(const ServicePtr& service, bool exec_in_pool) {
+            router_->RegisterService(service, exec_in_pool);
+            registry_->Register(service->GetDescriptor()->name());
+        }
 
         void RemoveSession(const std::string& session_id) {
             std::shared_ptr<Session> session;
@@ -98,7 +104,7 @@ namespace tinyRPC {
             });
         }
 
-        void AddSession(std::shared_ptr<Session> session) {
+        void AddSession(const std::shared_ptr<Session>& session) {
             session->Start();
             std::lock_guard lg(sessions_mu_);
             sessions_[session->Id()] = session;
@@ -119,6 +125,7 @@ namespace tinyRPC {
         std::unordered_map<std::string, session_ptr> sessions_;
         std::vector<std::thread> workers_;
         std::unique_ptr<IOThreadPool> io_pool_;
+        std::unique_ptr<Registry> registry_;
     };
 
     Server::Server(const std::string &address, uint16_t port) {
@@ -132,7 +139,7 @@ namespace tinyRPC {
         pimpl_ = std::make_unique<Impl>(ep, this);
     }
 
-    void Server::RegisterService(ServicePtr service, bool exec_in_pool) {
+    void Server::RegisterService(const ServicePtr& service, bool exec_in_pool) {
         pimpl_->RegisterService(service, exec_in_pool);
         if(gw_) { gw_->RegisterService(service, exec_in_pool); }
     }
@@ -153,7 +160,7 @@ namespace tinyRPC {
         pimpl_->Run();
     }
 
-    void Server::AddSession(std::shared_ptr<Session> session) { pimpl_->AddSession(session); }
+    void Server::AddSession(const std::shared_ptr<Session>& session) { pimpl_->AddSession(session); }
 
     Server::~Server() = default;
 
