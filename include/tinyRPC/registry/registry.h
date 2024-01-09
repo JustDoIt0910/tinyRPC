@@ -16,13 +16,13 @@ namespace tinyRPC {
     public:
         const static std::string prefix;
 
+        static std::string GetInterfaceIP();
+
         Registry(const std::string& etcd_endpoints, const tcp::endpoint& endpoint, int ttl);
 
         void Register(const std::string& service);
 
     private:
-        static std::string GetInterfaceIP();
-
         EtcdClient client_;
         std::string addr_;
         int ttl_;

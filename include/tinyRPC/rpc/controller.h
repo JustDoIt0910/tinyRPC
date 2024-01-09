@@ -36,6 +36,10 @@ namespace tinyRPC {
 
         bool Async() const;
 
+        void SetLoadBalanceKey(const std::string& key);
+
+        std::string LoadBalanceKey();
+
         // Server-side methods ---------------------------------------------
         // These calls may be made from the server side only.  Their results
         // are undefined on the client side (may crash).
@@ -49,6 +53,7 @@ namespace tinyRPC {
     private:
         std::optional<std::string> req_id_{std::nullopt};
         std::optional<int> connect_timeout_{std::nullopt};
+        std::string lb_key_;
         bool async_{false};
     };
 

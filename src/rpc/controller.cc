@@ -31,6 +31,10 @@ namespace tinyRPC {
 
     bool Controller::Async() const { return async_; }
 
+    void Controller::SetLoadBalanceKey(const std::string &key) { lb_key_ = key; }
+
+    std::string Controller::LoadBalanceKey() { return lb_key_; }
+
     void Controller::SetFailed(const std::string& reason) {}
 
     bool Controller::IsCanceled() const { return false; }

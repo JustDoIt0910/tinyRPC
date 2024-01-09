@@ -47,7 +47,11 @@ namespace tinyRPC {
                 resolver_->Resolve(method->service()->name());
                 resolved_ = true;
             }
-            std::string endpoint = lb_->GetEndpoint("");
+            std::string key = rpc_controller->LoadBalanceKey();
+            if(key.empty()) {
+                key = Registry::GetInterfaceIP();
+            }
+            std::string endpoint = lb_->GetEndpoint(key);
             if(endpoint.empty()) {
                 throw no_endpoint_error(method->service()->name());
             }
