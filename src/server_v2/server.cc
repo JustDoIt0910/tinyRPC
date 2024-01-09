@@ -9,16 +9,34 @@
 #include "tinyRPC/router/protobuf_router.h"
 #include "tinyRPC/registry/registry.h"
 #include "google/protobuf/descriptor.h"
+#include "yaml-cpp/yaml.h"
 #include <unordered_map>
 
 using namespace std::chrono_literals;
 
 namespace tinyRPC {
 
+    constexpr static char DefaultIP[] = "0.0.0.0";
+
+    constexpr static uint16_t DefaultPort = 9999;
+
+    constexpr static int DefaultMaxQueueSize = 500;
+
+    constexpr static int DefaultMaxPoolSize = 200;
+
+    constexpr static int DefaultCorePoolSize = 50;
+
+    constexpr static int DefaultMaxIdle = 30;
+
+    constexpr static ThreadPoolExecutor::RejectPolicy DefaultRejectPolicy =
+            ThreadPoolExecutor::RejectPolicy::ABORT;
+
+    constexpr static int DefaultRegistryTTL = 10;
+
     class IOThreadPool {
     public:
         explicit IOThreadPool(std::vector<std::thread>& threads):
-                threads_(threads), next(0) {
+        threads_(threads), next(0) {
             for (int i = 0; i < threads.size(); i++) {
                 std::shared_ptr<io_context> ctx = std::make_shared<io_context>();
                 std::shared_ptr<io_context::work> work = std::make_shared<io_context::work>(*ctx);
@@ -38,8 +56,7 @@ namespace tinyRPC {
             for(std::thread& th: threads_) { th.join(); }
         }
 
-        io_service& GetContext()
-        {
+        io_service& GetContext() {
             io_context& ctx = *io_contexts_[next++];
             if (next == io_contexts_.size() - 1) { next = 0; }
             return ctx;
@@ -54,22 +71,62 @@ namespace tinyRPC {
 
     class Server::Impl {
     public:
-        Impl(const ip::tcp::endpoint& ep, Server* server):
+        Impl(const std::string& config_file, Server* server):
         acceptor_(ioc_),
-        server_(server) {
+        server_(server),
+        config_(YAML::LoadFile(config_file)) {
             router_ = std::make_unique<ProtobufRpcRouter>();
-            executor_ = std::make_unique<ThreadPoolExecutor>(100, 100, 200, 30000ms,
-                                                             ThreadPoolExecutor::RejectPolicy::ABORT);
-            registry_ = std::make_unique<Registry>("http://110.40.210.125:2379", ep, 10);
+            std::string ip = DefaultIP;
+            uint16_t port = DefaultPort;
+            if(config_["server"]) {
+                YAML::Node server_conf = config_["server"];
+                if(server_conf["ip"]) { ip = server_conf["ip"].as<std::string>(); }
+                if(server_conf["port"]) { port = server_conf["port"].as<uint16_t>(); }
+                if(server_conf["io-thread-num"]) { SetThreadNum(server_conf["io-thread-num"].as<int>()); }
+            }
+            int max_queue_size = DefaultMaxQueueSize;
+            int max_pool_size = DefaultMaxPoolSize;
+            int core_pool_size = DefaultCorePoolSize;
+            int max_idle_seconds = DefaultMaxIdle;
+            ThreadPoolExecutor::RejectPolicy reject = DefaultRejectPolicy;
+            if(config_["executor"]) {
+                YAML::Node exec_conf = config_["executor"];
+                if(exec_conf["max-queue-size"]) { max_queue_size = exec_conf["max-queue-size"].as<int>(); }
+                if(exec_conf["core-pool-size"]) { core_pool_size = exec_conf["core-pool-size"].as<int>(); }
+                if(exec_conf["max-pool-size"]) { max_pool_size = exec_conf["max-pool-size"].as<int>(); }
+                if(exec_conf["max-idle-time"]) { max_idle_seconds = exec_conf["max-idle-time"].as<int>(); }
+                if(exec_conf["reject-policy"]) {
+                    reject = ThreadPoolExecutor::Policy(exec_conf["reject-policy"].as<std::string>());
+                }
+            }
+            executor_ = std::make_unique<ThreadPoolExecutor>(max_queue_size, core_pool_size,
+                                                             max_pool_size, max_idle_seconds * 1000ms,
+                                                             reject);
+            ip::address addr = ip::make_address(ip);
+            ip::tcp::endpoint ep(addr, port);
             acceptor_.open(ep.protocol());
             acceptor_.set_option(ip::tcp::acceptor::reuse_address(true));
             acceptor_.bind(ep);
             acceptor_.listen();
+            if(config_["registry"]) {
+                YAML::Node registry_conf = config_["registry"];
+                if(registry_conf["endpoints"]) {
+                    YAML::Node endpoints_conf = registry_conf["endpoints"];
+                    std::vector<std::string> etcd_endpoints;
+                    for(YAML::const_iterator it = endpoints_conf.begin(); it != endpoints_conf.end(); it++) {
+                        etcd_endpoints.push_back(it->as<std::string>());
+                    }
+                    int ttl = registry_conf["ttl"] ? registry_conf["ttl"].as<int>() : DefaultRegistryTTL;
+                    registry_ = std::make_unique<Registry>(std::move(etcd_endpoints), ep, ttl);
+                }
+            }
         }
 
         void RegisterService(const ServicePtr& service, bool exec_in_pool) {
             router_->RegisterService(service, exec_in_pool);
-            registry_->Register(service->GetDescriptor()->name());
+            if(registry_) {
+                registry_->Register(service->GetDescriptor()->name());
+            }
         }
 
         void RemoveSession(const std::string& session_id) {
@@ -126,17 +183,11 @@ namespace tinyRPC {
         std::vector<std::thread> workers_;
         std::unique_ptr<IOThreadPool> io_pool_;
         std::unique_ptr<Registry> registry_;
+        YAML::Node config_;
     };
 
-    Server::Server(const std::string &address, uint16_t port) {
-        ip::address addr = ip::make_address(address);
-        ip::tcp::endpoint ep(addr, port);
-        pimpl_ = std::make_unique<Impl>(ep, this);
-    }
-
-    Server::Server(uint16_t port) {
-        ip::tcp::endpoint ep(ip::tcp::v4(), port);
-        pimpl_ = std::make_unique<Impl>(ep, this);
+    Server::Server(const std::string& config_file) {
+        pimpl_ = std::make_unique<Impl>(config_file, this);
     }
 
     void Server::RegisterService(const ServicePtr& service, bool exec_in_pool) {

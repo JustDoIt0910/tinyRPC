@@ -20,6 +20,8 @@ namespace tinyRPC {
 
         Registry(const std::string& etcd_endpoints, const tcp::endpoint& endpoint, int ttl);
 
+        Registry(std::vector<std::string> etcd_endpoints, const tcp::endpoint& endpoint, int ttl);
+
         void Register(const std::string& service);
 
     private:

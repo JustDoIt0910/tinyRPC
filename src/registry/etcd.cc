@@ -4,15 +4,12 @@
 #include <utility>
 #include <future>
 #include "tinyRPC/registry/etcd.h"
-#include "tinyRPC/comm/string_util.h"
 #include "cpp-httplib/httplib.h"
 #include "nlohmann/json.hpp"
 
 namespace tinyRPC {
-
-    EtcdClient::EtcdClient(const std::string &endpoints, LB lb):
-    lb_strategy_(lb), endpoint_index_(0), random_engine_(std::random_device()()) {
-        StringUtil::Split(endpoints, ";", endpoints_);
+    EtcdClient::EtcdClient(std::vector<std::string> endpoints, tinyRPC::EtcdClient::LB lb):
+    endpoints_(std::move(endpoints)), lb_strategy_(lb), endpoint_index_(0), random_engine_(std::random_device()()) {
         if(endpoints_.empty()) {
             throw std::runtime_error("no endpoint available");
         }

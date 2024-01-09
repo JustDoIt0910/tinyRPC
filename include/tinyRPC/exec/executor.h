@@ -22,11 +22,13 @@ namespace tinyRPC {
 
         void Shutdown();
 
+        static RejectPolicy Policy(const std::string& policy);
+
         ~ThreadPoolExecutor();
 
     private:
         void WorkerRoutine();
-        void Reject(std::shared_ptr<Task> task);
+        void Reject(const std::shared_ptr<Task>& task);
 
         TaskQueue task_queue_;
         std::mutex mu_;

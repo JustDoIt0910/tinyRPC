@@ -106,6 +106,16 @@ namespace tinyRPC {
         std::string message_{"tinyRPC::etcd_error: "};
     };
 
+    class reject_policy_error: public std::runtime_error {
+    public:
+        explicit reject_policy_error(const std::string& detail);
+
+        const char* what() const noexcept override;
+
+    private:
+        std::string message_{"tinyRPC::reject_policy_error: "};
+    };
+
 }
 
 #endif //TINYRPC_ERROR_H

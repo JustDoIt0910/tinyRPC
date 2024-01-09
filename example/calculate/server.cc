@@ -18,8 +18,7 @@ public:
 };
 
 int main() {
-    tinyRPC::Server server(9998);
-    server.SetWorkerNum(8);
+    tinyRPC::Server server("config.yaml");
     server.RegisterService(std::make_shared<CalculateServiceImpl>(), true);
     server.Serve();
 }

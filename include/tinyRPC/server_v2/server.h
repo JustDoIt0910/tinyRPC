@@ -22,9 +22,7 @@ namespace tinyRPC {
 
     class Server {
     public:
-        Server(const std::string& addr, uint16_t port);
-
-        explicit Server(uint16_t port);
+        explicit Server(const std::string& config_file);
 
         void SetWorkerNum(int num);
 

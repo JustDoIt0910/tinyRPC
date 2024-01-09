@@ -8,7 +8,7 @@ using namespace tinyRPC;
 using namespace std::chrono_literals;
 
 int main() {
-    EtcdClient c("http://110.40.210.125:2379");
+    EtcdClient c({"http://110.40.210.125:2379"});
 //    c.Put("foo", "bar1");
 //    c.Put("foo/", "bar2");
 //    c.Put("foo/1", "bar3");

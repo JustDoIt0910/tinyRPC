@@ -1,0 +1,15 @@
+server:
+  port: 9999
+  io-thread-num: 8
+
+executor:
+  max-queue-size: 500
+  core-pool-size: 50
+  max-pool-size: 100
+  max-idle-time: 30
+  reject-policy: abort
+
+registry:
+  endpoints:
+    - http://110.40.210.125:2379
+  ttl: 10
