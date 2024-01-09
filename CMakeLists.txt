@@ -49,6 +49,7 @@ add_library(${PROJECT_NAME}
         src/registry/registry.cc
         src/client/client.cc
         src/client/channel.cc
+        src/client/lb.cc
         ${CMAKE_SOURCE_DIR}/tinyRPC/api/http_rule.pb.cc)
 
 target_include_directories(${PROJECT_NAME} PUBLIC ${CMAKE_SOURCE_DIR}/include)
