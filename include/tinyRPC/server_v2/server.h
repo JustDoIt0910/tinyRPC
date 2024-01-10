@@ -32,6 +32,8 @@ namespace tinyRPC {
 
         void AddSession(const std::shared_ptr<Session>& session);
 
+        std::shared_ptr<Session> GetHttpSession(Router* router);
+
         void Serve();
 
         ~Server();

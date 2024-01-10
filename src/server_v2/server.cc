@@ -2,10 +2,11 @@
 // Created by just do it on 2024/1/1.
 //
 #include "tinyRPC/server_v2/server.h"
-#include "tinyRPC/server_v2//session.h"
+#include "tinyRPC/server_v2/session.h"
 #include "tinyRPC/server_v2/gw.h"
 #include "tinyRPC/exec/executor.h"
 #include "tinyRPC/codec/protobuf_codec.h"
+#include "tinyRPC/codec/http_codec.h"
 #include "tinyRPC/router/protobuf_router.h"
 #include "tinyRPC/registry/registry.h"
 #include "google/protobuf/descriptor.h"
@@ -125,6 +126,7 @@ namespace tinyRPC {
         void RegisterService(const ServicePtr& service, bool exec_in_pool) {
             router_->RegisterService(service, exec_in_pool);
             if(registry_) {
+                std::cout << "register service " << service->GetDescriptor()->name() << std::endl;
                 registry_->Register(service->GetDescriptor()->name());
             }
         }
@@ -152,7 +154,7 @@ namespace tinyRPC {
         }
 
         void StartAccept() {
-            io_context& ctx = io_pool_ ? io_pool_->GetContext(): ioc_;
+            io_context& ctx = GetIOContext();
             std::unique_ptr<Codec> codec = std::make_unique<ProtobufRpcCodec>();
             session_ptr session = std::make_shared<Session>(server_, ctx, codec, router_.get(), executor_.get());
             acceptor_.async_accept(session->Socket(), [this, session] (std::error_code ec) {
@@ -168,6 +170,10 @@ namespace tinyRPC {
         }
 
         io_context& GetMainContext() { return ioc_; };
+
+        io_context& GetIOContext() { return io_pool_ ? io_pool_->GetContext(): ioc_; }
+
+        ThreadPoolExecutor* GetExecutor() { return executor_.get(); }
 
         ~Impl() { io_pool_->Stop(); }
     private:
@@ -212,6 +218,12 @@ namespace tinyRPC {
     }
 
     void Server::AddSession(const std::shared_ptr<Session>& session) { pimpl_->AddSession(session); }
+
+    std::shared_ptr<Session> Server::GetHttpSession(Router* router) {
+        io_context& ctx = pimpl_->GetIOContext();
+        std::unique_ptr<Codec> codec = std::make_unique<HttpRpcCodec>();
+        return std::make_shared<Session>(this, ctx, codec, router, pimpl_->GetExecutor());
+    }
 
     Server::~Server() = default;
 

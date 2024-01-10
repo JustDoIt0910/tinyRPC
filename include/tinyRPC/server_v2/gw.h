@@ -19,7 +19,7 @@ namespace tinyRPC {
     public:
         AbstractHttpApiGateway(std::unique_ptr<HttpProtobufMapper>, Server* server, uint16_t port);
 
-        void Init(asio::io_context& ctx);
+        void Init(asio::io_context& main_ctx);
 
         void RegisterService(std::shared_ptr<google::protobuf::Service> service, bool exec_in_pool);
 

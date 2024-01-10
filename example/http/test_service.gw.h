@@ -1,7 +1,7 @@
 #ifndef TINYRPC_HTTP_API_GW_H
 #define TINYRPC_HTTP_API_GW_H
-#include "tinyRPC/server/server.h"
-#include "tinyRPC/server/gw.h"
+#include "tinyRPC/server_v2/server.h"
+#include "tinyRPC/server_v2/gw.h"
 #include "tinyRPC/router/http_router.h"
 
 namespace tinyRPC {

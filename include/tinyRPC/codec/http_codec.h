@@ -6,8 +6,8 @@
 #define TINYRPC_HTTP_CODEC_H
 #include "tinyRPC/codec/abstract_codec.h"
 
-#define SAVE_STATE(state) { state_fn_ = &HttpRpcCodec::state; \
-                            return DecodeResult::DECODING; }
+#define SAVE_HTTP_CODEC_STATE(state) { state_fn_ = &HttpRpcCodec::state; \
+                                        return DecodeResult::DECODING; }
 
 namespace tinyRPC {
 

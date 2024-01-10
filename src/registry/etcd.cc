@@ -130,8 +130,7 @@ namespace tinyRPC {
     void EtcdClient::Keepalive(int64_t lease_id) {
         auto it = granted_leases_.find(lease_id);
         if(it == granted_leases_.end()) { return; }
-        int64_t keepalive_interval = (*it).second.ttl / 2;
-
+        int64_t keepalive_interval = (*it).second.ttl / 3;
 
         nlohmann::json content;
         content["ID"] = std::to_string(lease_id);
@@ -143,8 +142,8 @@ namespace tinyRPC {
         req->body = content.dump();
         std::thread keepalive_thread = std::thread([c, req, keepalive_interval]() {
             while(true) {
-                std::this_thread::sleep_for(std::chrono::seconds(keepalive_interval));
                 c->send(*req);
+                std::this_thread::sleep_for(std::chrono::seconds(keepalive_interval));
             }
         });
         keepalive_thread.detach();
