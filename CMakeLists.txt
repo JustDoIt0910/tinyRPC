@@ -27,13 +27,25 @@ add_custom_command(OUTPUT
         WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}
         COMMENT "compile http_rule.proto")
 
+option(USE_SERVER_V1 "use server version v1" OFF)
+
+if(USE_SERVER_V1)
+    message("using server version v1 (one io_context with multiply threads)")
+    add_definitions(-DUSE_SERVER_V1)
+    set(SERVER_SRCS
+            src/server/server.cc
+            src/server/session.cc
+            src/server/gw.cc)
+else ()
+    message("using server version v2 (io_context per threads with ThreadPoolExecutor)")
+    set(SERVER_SRCS
+            src/server_v2/server.cc
+            src/server_v2/session.cc
+            src/server_v2/gw.cc)
+endif ()
+
 add_library(${PROJECT_NAME}
-#        src/server/server.cc
-#        src/server/session.cc
-#        src/server/gw.cc
-        src/server_v2/server.cc
-        src/server_v2/session.cc
-        src/server_v2/gw.cc
+        ${SERVER_SRCS}
         src/exec/task_queue.cc
         src/exec/executor.cc
         src/router/base_router.cc

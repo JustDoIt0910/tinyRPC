@@ -22,17 +22,15 @@ namespace tinyRPC {
 
     class Server {
     public:
-        Server(const std::string& addr, uint16_t port);
-
-        explicit Server(uint16_t port);
+        explicit Server(const std::string& config_file);
 
         void SetWorkerNum(int num);
 
         void SetGateway(AbstractHttpApiGateway* gw);
 
-        void RegisterService(ServicePtr service);
+        void RegisterService(const ServicePtr& service, bool exec_in_pool = false);
 
-        void AddSession(std::shared_ptr<Session> session);
+        void AddSession(const std::shared_ptr<Session>& session);
 
         void Serve();
 

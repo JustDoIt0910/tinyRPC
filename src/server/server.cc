@@ -6,25 +6,62 @@
 #include "tinyRPC/server/gw.h"
 #include "tinyRPC/codec/protobuf_codec.h"
 #include "tinyRPC/router/protobuf_router.h"
+#include "tinyRPC/registry/registry.h"
+#include "google/protobuf/descriptor.h"
+#include "yaml-cpp/yaml.h"
 #include <unordered_map>
 
 using namespace asio;
 
 namespace tinyRPC {
 
+    constexpr static char DefaultIP[] = "0.0.0.0";
+
+    constexpr static uint16_t DefaultPort = 9999;
+
+    constexpr static int DefaultRegistryTTL = 10;
+
     class Server::Impl {
     public:
-        Impl(const ip::tcp::endpoint& ep, Server* server):
+        Impl(const std::string& config_file, Server* server):
         acceptor_(ioc_),
-        server_(server) {
+        server_(server),
+        config_(YAML::LoadFile(config_file)) {
             router_ = std::make_unique<ProtobufRpcRouter>();
+            std::string ip = DefaultIP;
+            uint16_t port = DefaultPort;
+            if (config_["server"]) {
+                YAML::Node server_conf = config_["server"];
+                if (server_conf["ip"]) { ip = server_conf["ip"].as<std::string>(); }
+                if (server_conf["port"]) { port = server_conf["port"].as<uint16_t>(); }
+                if (server_conf["io-thread-num"]) { SetThreadNum(server_conf["io-thread-num"].as<int>()); }
+            }
+            ip::address addr = ip::make_address(ip);
+            ip::tcp::endpoint ep(addr, port);
             acceptor_.open(ep.protocol());
             acceptor_.set_option(ip::tcp::acceptor::reuse_address(true));
             acceptor_.bind(ep);
             acceptor_.listen();
+            if (config_["registry"]) {
+                YAML::Node registry_conf = config_["registry"];
+                if (registry_conf["endpoints"]) {
+                    YAML::Node endpoints_conf = registry_conf["endpoints"];
+                    std::vector<std::string> etcd_endpoints;
+                    for (YAML::const_iterator it = endpoints_conf.begin(); it != endpoints_conf.end(); it++) {
+                        etcd_endpoints.push_back(it->as<std::string>());
+                    }
+                    int ttl = registry_conf["ttl"] ? registry_conf["ttl"].as<int>() : DefaultRegistryTTL;
+                    registry_ = std::make_unique<Registry>(std::move(etcd_endpoints), ep, ttl);
+                }
+            }
         }
 
-        void RegisterService(ServicePtr service) { router_->RegisterService(service); }
+        void RegisterService(const ServicePtr& service) {
+            router_->RegisterService(service, false);
+            if(registry_) {
+                registry_->Register(service->GetDescriptor()->name());
+            }
+        }
 
         void RemoveSession(const std::string& session_id) {
             std::shared_ptr<Session> session;
@@ -41,7 +78,7 @@ namespace tinyRPC {
         void StartAccept() {
             acceptor_.async_accept([this] (std::error_code ec, ip::tcp::socket socket) {
                 std::unique_ptr<Codec> codec = std::make_unique<ProtobufRpcCodec>();
-                session_ptr session = std::make_shared<Session>(server_, ioc_, socket, codec, router_.get());
+                SessionPtr session = std::make_shared<Session>(server_, ioc_, socket, codec, router_.get());
                 AddSession(session);
                 StartAccept();
             });
@@ -59,7 +96,7 @@ namespace tinyRPC {
             }
         }
 
-        void AddSession(std::shared_ptr<Session> session) {
+        void AddSession(const std::shared_ptr<Session>& session) {
             session->Start();
             std::lock_guard lg(sessions_mu_);
             sessions_[session->Id()] = session;
@@ -68,29 +105,24 @@ namespace tinyRPC {
         io_context& GetMainContext() { return ioc_; };
 
     private:
-        using session_ptr = std::shared_ptr<Session>;
+        using SessionPtr = std::shared_ptr<Session>;
 
         io_context ioc_;
         ip::tcp::acceptor acceptor_;
         Server* server_;
         std::unique_ptr<Router> router_;
         std::mutex sessions_mu_;
-        std::unordered_map<std::string, session_ptr> sessions_;
+        std::unordered_map<std::string, SessionPtr> sessions_;
         std::vector<std::thread> workers_;
+        std::unique_ptr<Registry> registry_;
+        YAML::Node config_;
     };
 
-    Server::Server(const std::string &address, uint16_t port) {
-        ip::address addr = ip::make_address(address);
-        ip::tcp::endpoint ep(addr, port);
-        pimpl_ = std::make_unique<Impl>(ep, this);
+    Server::Server(const std::string& config_file) {
+        pimpl_ = std::make_unique<Impl>(config_file, this);
     }
 
-    Server::Server(uint16_t port) {
-        ip::tcp::endpoint ep(ip::tcp::v4(), port);
-        pimpl_ = std::make_unique<Impl>(ep, this);
-    }
-
-    void Server::RegisterService(ServicePtr service) {
+    void Server::RegisterService(const ServicePtr& service, bool exec_in_pool) {
         pimpl_->RegisterService(service);
         if(gw_) { gw_->RegisterService(service); }
     }
@@ -111,7 +143,7 @@ namespace tinyRPC {
         pimpl_->Run();
     }
 
-    void Server::AddSession(std::shared_ptr<Session> session) { pimpl_->AddSession(session); }
+    void Server::AddSession(const std::shared_ptr<Session>& session) { pimpl_->AddSession(session); }
 
     Server::~Server() = default;
 

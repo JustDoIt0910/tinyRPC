@@ -156,7 +156,7 @@ namespace tinyRPC {
         void StartAccept() {
             io_context& ctx = GetIOContext();
             std::unique_ptr<Codec> codec = std::make_unique<ProtobufRpcCodec>();
-            session_ptr session = std::make_shared<Session>(server_, ctx, codec, router_.get(), executor_.get());
+            SessionPtr session = std::make_shared<Session>(server_, ctx, codec, router_.get(), executor_.get());
             acceptor_.async_accept(session->Socket(), [this, session] (std::error_code ec) {
                 AddSession(session);
                 StartAccept();
@@ -177,7 +177,7 @@ namespace tinyRPC {
 
         ~Impl() { io_pool_->Stop(); }
     private:
-        using session_ptr = std::shared_ptr<Session>;
+        using SessionPtr = std::shared_ptr<Session>;
 
         io_context ioc_;
         ip::tcp::acceptor acceptor_;
@@ -185,7 +185,7 @@ namespace tinyRPC {
         std::unique_ptr<Router> router_;
         std::unique_ptr<ThreadPoolExecutor> executor_;
         std::mutex sessions_mu_;
-        std::unordered_map<std::string, session_ptr> sessions_;
+        std::unordered_map<std::string, SessionPtr> sessions_;
         std::vector<std::thread> workers_;
         std::unique_ptr<IOThreadPool> io_pool_;
         std::unique_ptr<Registry> registry_;

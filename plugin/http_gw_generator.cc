@@ -15,10 +15,17 @@ using namespace google::protobuf;
 using namespace google::protobuf::io;
 using namespace google::protobuf::compiler;
 
+#ifndef USE_SERVER_V1
+static std::string headers = "#include \"tinyRPC/server_v2/server.h\"\n"
+                             "#include \"tinyRPC/server_v2/gw.h\"";
+#else
+static std::string headers = "#include \"tinyRPC/server/server.h\"\n"
+                             "#include \"tinyRPC/server/gw.h\"";
+#endif
+
 static std::string code = "#ifndef TINYRPC_HTTP_API_GW_H\n"
                           "#define TINYRPC_HTTP_API_GW_H\n"
-                          "#include \"tinyRPC/server_v2/server.h\"\n"
-                          "#include \"tinyRPC/server_v2/gw.h\"\n"
+                          "[server_include_headers]\n"
                           "#include \"tinyRPC/router/http_router.h\"\n"
                           "\n"
                           "namespace tinyRPC {\n"
@@ -78,6 +85,7 @@ class MyGenerator : public google::protobuf::compiler::cpp::CppGenerator {
             }
         }
         http_protobuf_map.erase(http_protobuf_map.size() - 1);
+        code.replace(code.find("[server_include_headers]"), strlen("[server_include_headers]"), headers);
         code.replace(code.find("[http_protobuf_map]"), strlen("[http_protobuf_map]"), http_protobuf_map);
         printer.PrintRaw(code);
         return true;
