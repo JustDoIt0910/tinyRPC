@@ -1,7 +1,11 @@
 //
 // Created by just do it on 2023/12/5.
 //
+#ifndef USE_SERVER_V1
 #include "tinyRPC/server_v2/server.h"
+#else
+#include "tinyRPC/server/server.h"
+#endif
 #include "calculate_service.pb.h"
 
 using namespace std::chrono_literals;

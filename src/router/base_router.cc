@@ -2,12 +2,17 @@
 // Created by just do it on 2023/12/5.
 //
 #include "tinyRPC/router/base_router.h"
-#include "tinyRPC/server_v2/session.h"
 #include "tinyRPC/exec/executor.h"
 #include "tinyRPC/rpc/message.h"
 #include "tinyRPC/rpc/controller.h"
 #include <google/protobuf/message.h>
 #include <google/protobuf/descriptor.h>
+
+#ifndef USE_SERVER_V1
+#include "tinyRPC/server_v2/session.h"
+#else
+#include "tinyRPC/server/session.h"
+#endif
 
 using namespace google;
 
@@ -75,6 +80,7 @@ namespace tinyRPC {
             response.ec_ = rpc_error::error_code::RPC_SUCCESS;
         }
         else {
+#ifndef USE_SERVER_V1
             if(!executor) {
                 response.ec_ = rpc_error::error_code::RPC_CALL_ERROR;
                 response.error_detail_ = "Executor not found";
@@ -111,6 +117,7 @@ namespace tinyRPC {
             catch (rpc_error& e) {
                 response.ec_ = e.error().code();
             }
+#endif
         }
         return response;
     }

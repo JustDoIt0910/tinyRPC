@@ -21,7 +21,7 @@ namespace tinyRPC {
 
         void Init(asio::io_context& ctx);
 
-        void RegisterService(std::shared_ptr<google::protobuf::Service> service);
+        void RegisterService(const std::shared_ptr<google::protobuf::Service>& service);
 
         virtual ~AbstractHttpApiGateway();
 
