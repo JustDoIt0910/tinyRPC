@@ -119,7 +119,7 @@ namespace tinyRPC {
             bool response_received_;
         };
 
-        explicit EtcdClient(const std::string& endpoints, LB lb = LB::ROUND_ROBIN);
+        explicit EtcdClient(std::vector<std::string> endpoints, LB lb = LB::ROUND_ROBIN);
 
         std::shared_ptr<EtcdResponse> Put(const std::string& key, const std::string& value);
 

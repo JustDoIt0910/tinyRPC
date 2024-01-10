@@ -13,7 +13,7 @@ void handle_event(EventList& events) {
 }
 
 int main() {
-    EtcdClient c("http://110.40.210.125:2379");
+    EtcdClient c({"http://110.40.210.125:2379"});
     auto resp = c.Watch("foo").HandleEvent(handle_event);
     if(resp->Ok()) {
         std::cout << "watch ok" << std::endl;

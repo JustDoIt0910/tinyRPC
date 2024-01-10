@@ -2,6 +2,7 @@
 // Created by just do it on 2024/1/1.
 //
 #include "tinyRPC/exec/executor.h"
+#include "tinyRPC/comm/string_util.h"
 
 using namespace std::chrono_literals;
 
@@ -99,7 +100,7 @@ namespace tinyRPC {
         }
     }
 
-    void ThreadPoolExecutor::Reject(std::shared_ptr<Task> task) {
+    void ThreadPoolExecutor::Reject(const std::shared_ptr<Task>& task) {
         if(reject_policy_ == RejectPolicy::ABORT) {
             rpc_error::error_code ec(rpc_error::error_code::RPC_THREAD_POOL_REJECTED);
             throw rpc_error(ec);
@@ -112,5 +113,15 @@ namespace tinyRPC {
     ThreadPoolExecutor::~ThreadPoolExecutor() {
         if(shutting_down_.load()) { return; }
         Shutdown();
+    }
+
+    ThreadPoolExecutor::RejectPolicy ThreadPoolExecutor::Policy(const std::string& policy) {
+        std::string lower = policy;
+        StringUtil::ToLower(lower);
+        if(lower == "abort") { return RejectPolicy::ABORT; }
+        if(lower == "caller_run") { return RejectPolicy::CALLER_RUN; }
+        if(lower == "discard") { return RejectPolicy::DISCARD; }
+        if(lower == "discard_oldest") { return RejectPolicy::DISCARD_OLDEST; }
+        throw reject_policy_error(policy);
     }
 }

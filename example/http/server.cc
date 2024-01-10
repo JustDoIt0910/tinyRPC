@@ -37,7 +37,7 @@ class UserServiceImpl: public UserService {
 };
 
 int main() {
-    Server server(9999);
+    Server server("config.yaml");
     HttpApiGateway gw(&server, 8080);
 
     server.RegisterService(std::make_shared<GreeterServiceImpl>());

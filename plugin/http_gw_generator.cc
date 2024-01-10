@@ -17,8 +17,8 @@ using namespace google::protobuf::compiler;
 
 static std::string code = "#ifndef TINYRPC_HTTP_API_GW_H\n"
                           "#define TINYRPC_HTTP_API_GW_H\n"
-                          "#include \"tinyRPC/server/server.h\"\n"
-                          "#include \"tinyRPC/server/gw.h\"\n"
+                          "#include \"tinyRPC/server_v2/server.h\"\n"
+                          "#include \"tinyRPC/server_v2/gw.h\"\n"
                           "#include \"tinyRPC/router/http_router.h\"\n"
                           "\n"
                           "namespace tinyRPC {\n"

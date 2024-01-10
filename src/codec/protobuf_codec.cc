@@ -64,7 +64,7 @@ namespace tinyRPC {
     }
 
     Codec::DecodeResult ProtobufRpcCodec::DecodeTotalLen(RpcMessage& message) {
-        if(Readable() < sizeof(total_len_t)) SAVE_STATE(DecodeTotalLen)
+        if(Readable() < sizeof(total_len_t)) SAVE_PROTO_CODEC_STATE(DecodeTotalLen)
         auto total = Fetch<total_len_t>();
         Discard(sizeof(total_len_t));
         if(total <= fixed_len_) {
@@ -76,11 +76,11 @@ namespace tinyRPC {
 
     Codec::DecodeResult ProtobufRpcCodec::DecodeMsgId(RpcMessage& message) {
         if(cur_field_len_ == 0) {
-            if(Readable() < sizeof(message_id_len_t)) SAVE_STATE(DecodeMsgId)
+            if(Readable() < sizeof(message_id_len_t)) SAVE_PROTO_CODEC_STATE(DecodeMsgId)
             cur_field_len_ = Fetch<message_id_len_t>();
             Discard(sizeof(message_id_len_t));
         }
-        if(Readable() < cur_field_len_) SAVE_STATE(DecodeMsgId)
+        if(Readable() < cur_field_len_) SAVE_PROTO_CODEC_STATE(DecodeMsgId)
         GetMessage<RpcMessage>()->msg_id_ = std::string(Fetch(), cur_field_len_);
         Discard(cur_field_len_);
         data_len_ -= cur_field_len_;
@@ -92,14 +92,14 @@ namespace tinyRPC {
     }
 
     Codec::DecodeResult ProtobufRpcCodec::DecodeData(RpcMessage& message) {
-        if(Readable() < data_len_) SAVE_STATE(DecodeData);
+        if(Readable() < data_len_) SAVE_PROTO_CODEC_STATE(DecodeData);
         GetMessage<RpcMessage>()->data_ = std::string(Fetch(), data_len_);
         Discard(data_len_);
         return DecodeCrc(message);
     }
 
     Codec::DecodeResult ProtobufRpcCodec::DecodeCrc(RpcMessage& message) {
-        if(Readable() < sizeof(crc_t)) SAVE_STATE(DecodeCrc)
+        if(Readable() < sizeof(crc_t)) SAVE_PROTO_CODEC_STATE(DecodeCrc)
         DecodeResult res = Codec::DecodeResult::SUCCESS;
 //        if(!GetMessage<RpcMessage>()->CheckCRC(Fetch<crc_t>())) {
 //            res = Codec::DecodeResult::ERROR;
@@ -110,11 +110,11 @@ namespace tinyRPC {
 
     Codec::DecodeResult ProtobufRpcCodec::DecodeMethod(RpcMessage& message) {
         if(cur_field_len_ == 0) {
-            if(Readable() < sizeof(method_name_len_t)) SAVE_STATE(DecodeMethod)
+            if(Readable() < sizeof(method_name_len_t)) SAVE_PROTO_CODEC_STATE(DecodeMethod)
             cur_field_len_ = Fetch<method_name_len_t>();
             Discard(sizeof(method_name_len_t));
         }
-        if(Readable() < cur_field_len_) SAVE_STATE(DecodeMethod)
+        if(Readable() < cur_field_len_) SAVE_PROTO_CODEC_STATE(DecodeMethod)
         GetMessage<RpcRequest>()->full_method_name_ = std::string(Fetch(), cur_field_len_);
         Discard(cur_field_len_);
         data_len_ -= cur_field_len_;
@@ -123,7 +123,7 @@ namespace tinyRPC {
     }
 
     Codec::DecodeResult ProtobufRpcCodec::DecodeErrorCode(RpcMessage& message) {
-        if(Readable() < sizeof(error_code_t)) SAVE_STATE(DecodeErrorCode);
+        if(Readable() < sizeof(error_code_t)) SAVE_PROTO_CODEC_STATE(DecodeErrorCode);
         GetMessage<RpcResponse>()->ec_ = Fetch<error_code_t>();
         Discard(sizeof(error_code_t));
         return DecodeError(message);
@@ -131,11 +131,11 @@ namespace tinyRPC {
 
     Codec::DecodeResult ProtobufRpcCodec::DecodeError(RpcMessage& message) {
         if(cur_field_len_ == 0) {
-            if(Readable() < sizeof(error_len_t)) SAVE_STATE(DecodeError)
+            if(Readable() < sizeof(error_len_t)) SAVE_PROTO_CODEC_STATE(DecodeError)
             cur_field_len_ = Fetch<error_len_t>();
             Discard(sizeof(error_len_t));
         }
-        if(Readable() < cur_field_len_) SAVE_STATE(DecodeError)
+        if(Readable() < cur_field_len_) SAVE_PROTO_CODEC_STATE(DecodeError)
         GetMessage<RpcResponse>()->error_detail_ = std::string(Fetch(), cur_field_len_);
         Discard(cur_field_len_);
         data_len_ -= cur_field_len_;

@@ -4,12 +4,19 @@
 #include "tinyRPC/registry/registry.h"
 #include "tinyRPC/rpc/error.h"
 #include "tinyRPC/comm/endian.h"
+#include "tinyRPC/comm/string_util.h"
 #include <ifaddrs.h>
 #include <iostream>
 
 namespace tinyRPC {
 
     const std::string Registry::prefix = "/tinyRPC";
+
+    std::vector<std::string> SplitEndpoints(const std::string& endpoints) {
+        std::vector<std::string> eps;
+        StringUtil::Split(endpoints, ";", eps);
+        return eps;
+    }
 
     std::string Registry::GetInterfaceIP() {
         ifaddrs* interfaces = nullptr;
@@ -38,8 +45,10 @@ namespace tinyRPC {
     }
 
     Registry::Registry(const std::string &etcd_endpoints, const tcp::endpoint& endpoint, int ttl):
-    client_(etcd_endpoints),
-    ttl_(ttl) {
+    Registry(SplitEndpoints(etcd_endpoints), endpoint, ttl) {}
+
+    Registry::Registry(std::vector<std::string> etcd_endpoints, const tcp::endpoint &endpoint, int ttl):
+    client_(std::move(etcd_endpoints)), ttl_(ttl) {
         if(endpoint.address().is_unspecified()) {
             addr_ = GetInterfaceIP();
         }
@@ -70,7 +79,7 @@ namespace tinyRPC {
     }
 
     Resolver::Resolver(const std::string& endpoints, const std::shared_ptr<Balancer>& balancer):
-    client_(endpoints), balancer_(balancer) {}
+    client_(SplitEndpoints(endpoints)), balancer_(balancer) {}
 
     void Resolver::Resolve(const std::string &service) {
         std::string key = Registry::prefix + "/" + service;

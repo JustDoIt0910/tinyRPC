@@ -18,6 +18,7 @@ set(THIRD_PARTY_DIR ${CMAKE_SOURCE_DIR}/third_party)
 
 add_subdirectory(${THIRD_PARTY_DIR}/json-3.11.3)
 add_subdirectory(${THIRD_PARTY_DIR}/b64.c)
+add_subdirectory(${THIRD_PARTY_DIR}/yaml-cpp)
 
 add_custom_command(OUTPUT
         ${CMAKE_SOURCE_DIR}/tinyRPC/api/http_rule.pb.h
@@ -59,7 +60,10 @@ target_include_directories(${PROJECT_NAME} PRIVATE
         ${THIRD_PARTY_DIR}
         ${THIRD_PARTY_DIR}/asio)
 
-target_link_libraries(${PROJECT_NAME} PRIVATE nlohmann_json::nlohmann_json b64c)
+target_link_libraries(${PROJECT_NAME} PRIVATE
+        nlohmann_json::nlohmann_json
+        yaml-cpp::yaml-cpp
+        b64c)
 
 set(LIBS ${PROJECT_NAME} ${Protobuf_LIBRARY} pthread uuid)
 

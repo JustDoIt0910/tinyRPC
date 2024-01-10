@@ -1,7 +1,7 @@
 //
 // Created by just do it on 2023/12/11.
 //
-#include "tinyRPC/server_v2//server.h"
+#include "tinyRPC/server_v2/server.h"
 #include "tinyRPC/server_v2/session.h"
 #include "tinyRPC/server_v2/gw.h"
 #include "tinyRPC/codec/http_codec.h"
@@ -13,7 +13,10 @@ namespace tinyRPC {
     class AbstractHttpApiGateway::Impl {
     public:
         Impl(Server* server, uint16_t port, HttpRouter* router):
-        server_(server), port_(port), router_(router) {}
+        server_(server),
+        port_(port),
+        router_(router),
+        ctx_(nullptr) {}
 
         void Init(asio::io_context& ctx) {
             ctx_ = &ctx;
@@ -28,12 +31,11 @@ namespace tinyRPC {
 
     private:
         void StartAccept() {
-//            acceptor_->async_accept([this] (std::error_code ec, asio::ip::tcp::socket socket) {
-//                std::unique_ptr<Codec> codec = std::make_unique<HttpRpcCodec>();
-//                auto session = std::make_shared<Session>(server_, *ctx_, std::move(socket), codec, router_);
-//                server_->AddSession(session);
-//                StartAccept();
-//            });
+            auto session = server_->GetHttpSession(router_);
+            acceptor_->async_accept(session->Socket(), [this, session] (std::error_code ec) {
+                server_->AddSession(session);
+                StartAccept();
+            });
         }
 
         uint16_t port_;

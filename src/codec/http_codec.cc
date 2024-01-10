@@ -65,7 +65,7 @@ namespace tinyRPC {
 
     Codec::DecodeResult HttpRpcCodec::DecodeRequestLine(RpcMessage &message) {
         std::string line;
-        if(!NextLine(line)) SAVE_STATE(DecodeRequestLine)
+        if(!NextLine(line)) SAVE_HTTP_CODEC_STATE(DecodeRequestLine)
         StringUtil::Trim(line);
         http_request_->method_ = line.substr(0, line.find(' '));
         StringUtil::ToLower(http_request_->method_ );
@@ -92,7 +92,7 @@ namespace tinyRPC {
     Codec::DecodeResult HttpRpcCodec::DecodeHeaders(RpcMessage& message) {
         while(true) {
             std::string line;
-            if(!NextLine(line)) SAVE_STATE(DecodeRequestLine)
+            if(!NextLine(line)) SAVE_HTTP_CODEC_STATE(DecodeRequestLine)
             if(line.empty()) { break; }
             std::string::size_type pos = line.find(':');
             if(pos == std::string::npos) {
@@ -137,7 +137,7 @@ namespace tinyRPC {
     }
 
     Codec::DecodeResult HttpRpcCodec::DecodeBody(RpcMessage& message) {
-        if(Readable() < content_len_) SAVE_STATE(DecodeBody)
+        if(Readable() < content_len_) SAVE_HTTP_CODEC_STATE(DecodeBody)
         http_request_->body_ = std::string(Fetch(), content_len_);
         Discard(content_len_);
         return Done(Codec::DecodeResult::SUCCESS, message);
